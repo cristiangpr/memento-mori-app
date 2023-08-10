@@ -1,11 +1,11 @@
 const express = require('express')
 const path = require('path')
-const cors = require("cors"); 
+const cors = require('cors')
 
 const app = express()
 const port = process.env.PORT || 3000
 app.use(express.json())
-app.use('/manifest.json', function (req, res, next) {
+app.use(function (req, res, next) {
   res.set({
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET',
