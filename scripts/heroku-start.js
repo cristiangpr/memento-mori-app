@@ -10,7 +10,7 @@ app.use(express.static(path.join(__dirname, '..', 'build')))
 // Root Redirects to the pre-build assets
 app.use('/manifest.json', function (req, res, next) {
   res.set({
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': 'https://app.safe.global',
     'Access-Control-Allow-Methods': 'GET',
     'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization',
   })
