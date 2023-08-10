@@ -1,7 +1,9 @@
 // App is an express application, we can add an express middleware that will set headers for manifest.json request
 // https://create-react-app.dev/docs/proxying-api-requests-in-development/#configuring-the-proxy-manually
+const cors = require('cors')
 
 module.exports = function (app) {
+  app.use(cors())
   app.use('/manifest.json', function (req, res, next) {
     res.set({
       'Access-Control-Allow-Origin': '*',

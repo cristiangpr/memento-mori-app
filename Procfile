@@ -1,1 +1,1 @@
-web: node setupProxy.js
+web: node scripts/heroku-start.js
