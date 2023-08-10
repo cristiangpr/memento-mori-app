@@ -5,15 +5,7 @@ const cors = require('cors')
 const app = express()
 const port = process.env.PORT || 3000
 app.use(express.json())
-app.use(function (req, res, next) {
-  res.set({
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET',
-    'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization',
-  })
 
-  next()
-})
 app.use(cors())
 
 // Your static pre-build assets folder
