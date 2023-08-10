@@ -1,15 +1,27 @@
 {
-  "name": "iwill-safe",
+  "name": "die-smart-app",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@gnosis.pm/safe-apps-react-sdk": "^4.6.2",
+    "@gnosis.pm/safe-apps-sdk": "^7.8.0",
     "@gnosis.pm/safe-react-components": "^1.2.0",
     "@material-ui/core": "^4.12.4",
+    "@safe-global/protocol-kit": "^1.2.0",
+    "@safe-global/safe-apps-react-sdk": "^4.6.7",
+    "@safe-global/safe-apps-sdk": "^8.0.0",
+    "@safe-global/safe-core-sdk-types": "^2.2.0",
+    "bignumber.js": "^9.1.1",
+    "dotenv": "^16.3.1",
+    "eslint-config-airbnb-typescript-prettier": "^5.0.0",
+    "ethers": "^6.4.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "react-hook-form": "^7.44.3",
+    "react-router-dom": "^6.14.2",
     "react-scripts": "^5.0.1",
-    "styled-components": "^5.3.11"
+    "styled-components": "^5.3.11",
+    "web3-eth-abi": "^1.10.0",
+    "web3-utils": "^1.10.0"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -53,6 +65,7 @@
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "prettier": "^2.8.8",
+    "react-app-rewired": "^2.2.1",
     "typescript": "^4.9.5"
   }
 }

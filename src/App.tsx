@@ -1,56 +1,77 @@
-import React, { useCallback } from 'react'
+/* eslint-disable no-param-reassign */
+import React, { FormEvent, useState } from 'react'
 import styled from 'styled-components'
-import { Button, Title } from '@gnosis.pm/safe-react-components'
-import { useSafeAppsSDK } from '@gnosis.pm/safe-apps-react-sdk'
+import { Title, TextField, Button, TextFieldInput } from '@gnosis.pm/safe-react-components'
+import { Controller, useFieldArray, useForm } from 'react-hook-form'
+import { ZeroAddress } from 'ethers'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { useSafeBalances } from './hooks/useSafeBalances'
+import BalancesTable from './components/BalancesTable'
+import { Form, FormTypes } from './types'
+import { createWill } from './utils'
+// eslint-disable-next-line import/no-cycle
+import BeneficiaryFields from './components/BeneficiaryFields'
+import Navbar from './components/Navbar'
+import CreateForm from './components/CreateForm'
+import MyWill from './components/MyWill'
 
 const Container = styled.div`
   padding: 1rem;
   width: 100%;
   height: 100%;
   display: flex;
-  justify-content: center;
+
   align-items: center;
   flex-direction: column;
 `
+const Input = styled.input`
+  type: text;
+  height 2rem;
+  width: 100%;
+  border-radius: 5px;
+  font-size: 15px;
 
-const Link = styled.a`
-  margin-top: 8px;
+`
+const WillForm = styled.form`
+  padding: 1rem;
+  width: 50%;
+`
+export const Row = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: 0.5rem 0 0.5rem 0;
+`
+export const LeftColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex-basis: 100%;
+  flex: 1;
+  padding-right: 0.5rem;
+`
+export const RightColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex-basis: 100%;
+  flex: 1;
+  padding-left: 0.5rem;
+`
+export const FloatColumn = styled.div`
+  width: 45%;
+  float: left;
+  padding: 0.5rem;
 `
 
-const SafeApp = (): React.ReactElement => {
-  const { sdk, safe } = useSafeAppsSDK()
-
-  const submitTx = useCallback(async () => {
-    try {
-      const { safeTxHash } = await sdk.txs.send({
-        txs: [
-          {
-            to: safe.safeAddress,
-            value: '0',
-            data: '0x',
-          },
-        ],
-      })
-      console.log({ safeTxHash })
-      const safeTx = await sdk.txs.getBySafeTxHash(safeTxHash)
-      console.log({ safeTx })
-    } catch (e) {
-      console.error(e)
-    }
-  }, [safe, sdk])
-
+function SafeApp(): React.ReactElement {
   return (
-    <Container>
-      <Title size="md">Safe: {safe.safeAddress}</Title>
-
-      <Button size="lg" color="primary" onClick={submitTx}>
-        Click to send a test transaction
-      </Button>
-
-      <Link href="https://github.com/gnosis/safe-apps-sdk" target="_blank" rel="noreferrer">
-        Documentation
-      </Link>
-    </Container>
+    <BrowserRouter>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<CreateForm />} />
+        <Route path="/myWill" element={<MyWill />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
