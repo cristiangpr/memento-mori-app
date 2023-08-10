@@ -5,9 +5,9 @@ const app = express()
 const port = process.env.PORT || 3000
 app.use(express.json())
 app.use((req, res, next) => {
-  res.append('Access-Control-Allow-Origin', ['*'])
-  res.append('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
-  res.append('Access-Control-Allow-Headers', 'X-Requested-With, content-type, Authorization')
+  req.append('Access-Control-Allow-Origin', '*')
+  req.append('Access-Control-Allow-Methods', 'GET')
+  req.append('Access-Control-Allow-Headers', 'X-Requested-With, content-type, Authorization')
   next()
 })
 
