@@ -5,14 +5,16 @@ const app = express()
 const port = process.env.PORT || 3000
 app.use(express.json())
 
-
 // Your static pre-build assets folder
 app.use(express.static(path.join(__dirname, '..', 'build')))
 // Root Redirects to the pre-build assets
-app.use((req, res, next) => {
-  res.append('Access-Control-Allow-Origin', ['*'])
-  res.append('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
-  res.append('Access-Control-Allow-Headers', 'Content-Type')
+app.use('/manifest.json', function (req, res, next) {
+  res.set({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET',
+    'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization',
+  })
+
   next()
 })
 
