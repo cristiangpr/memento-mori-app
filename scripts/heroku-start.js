@@ -4,9 +4,6 @@ const path = require('path')
 const app = express()
 const port = process.env.PORT || 3000
 app.use(express.json())
-// Your static pre-build assets folder
-app.use(express.static(path.join(__dirname, '..', 'build')))
-// Root Redirects to the pre-build assets
 app.use(function (req, res, next) {
   res.set({
     'Access-Control-Allow-Origin': '*',
@@ -16,6 +13,10 @@ app.use(function (req, res, next) {
 
   next()
 })
+// Your static pre-build assets folder
+app.use(express.static(path.join(__dirname, '..', 'build')))
+// Root Redirects to the pre-build assets
+
 app.get('/', function (req, res) {
   res.sendFile(path.join(__dirname, '..', 'build'))
 })
