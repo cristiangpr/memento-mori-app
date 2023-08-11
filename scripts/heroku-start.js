@@ -6,8 +6,8 @@ const app = express()
 const port = process.env.PORT || 3000
 app.use(express.json())
 
-app.use('/manifest.json', function (req, res, next) {
-  res.set({
+app.use(function (req, res, next) {
+  res.st({
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET',
     'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization',
