@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Controller, useFieldArray } from 'react-hook-form'
 import { Button, TextFieldInput } from '@gnosis.pm/safe-react-components'
 import { ErrorDescription } from 'ethers'
 import { LeftColumn, RightColumn, Row } from './FormElements'
 
-export default function BeneficiaryFields({ tokenType, nestIndex, control }): React.ReactElement {
+export default function BeneficiaryFields({ tokenType, nestIndex, control, errors, clearErrors }): React.ReactElement {
   const isNative = tokenType === 'nativeToken'
   const {
     fields: beneficiaryFields,
@@ -14,6 +14,15 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control }): Re
     control,
     name: `${tokenType}.${nestIndex}.beneficiaries`,
   })
+
+  const [err, setErr] = useState()
+
+  const handleError = (errs, type) => {
+    const filtered = errs.type.filter((element) => {
+      return element !== null
+    })
+    return filtered
+  }
 
   return (
     <>
@@ -52,7 +61,6 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control }): Re
             <RightColumn>
               <Controller
                 control={control}
-                rules={{ required: true }}
                 name={
                   tokenType === 'nfts'
                     ? `${tokenType}.${nestIndex}.beneficiaries.${index}.address`
@@ -64,7 +72,10 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control }): Re
                   formState,
                 }) => (
                   <TextFieldInput
-                    onBlur={onBlur} // notify when input is touched
+                    onBlur={() => {
+                      onBlur()
+                      clearErrors()
+                    }} // notify when input is touched
                     onChange={onChange} // send value to hook form
                     inputRef={ref}
                     label={tokenType === 'nfts' ? 'beneficiary address' : 'percentage'}
@@ -74,7 +85,12 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control }): Re
                         : `${tokenType}.${nestIndex}.beneficiaries.${index}.percentage`
                     }
                     helperText={tokenType !== 'nfts' && 'Make sure percentages add up to 100'}
-                    error={error?.type}
+                    error={
+                      errors &&
+                      errors[tokenType] &&
+                      errors[tokenType][nestIndex] &&
+                      errors[tokenType][nestIndex].beneficiaries.message
+                    }
                   />
                 )}
               />

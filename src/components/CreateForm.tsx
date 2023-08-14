@@ -23,6 +23,8 @@ function CreateForm(): React.ReactElement {
     handleSubmit,
     watch,
     control,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<FormTypes>({
     defaultValues: {
@@ -73,8 +75,54 @@ function CreateForm(): React.ReactElement {
     name: 'erc1155s',
   })
 
+  const validateFieldsSum = (data) => {
+    let nativeSum = 0
+    for (let i = 0; i < data.nativeToken[0].beneficiaries.length; i += 1) {
+      nativeSum += Number(data.nativeToken[0].beneficiaries[i].percentage)
+    }
+    if (nativeSum !== 100) {
+      setError(`nativeToken.${0}.beneficiaries`, {
+        type: 'manual',
+        message: 'Field values must add up to 100.',
+      })
+      return false
+    }
+
+    for (let i = 0; i < data.tokens.length; i += 1) {
+      let tokenSum = 0
+      for (let j = 0; j < data.tokens[i].beneficiaries.length; j += 1) {
+        tokenSum += Number(data.tokens[i].beneficiaries[j].percentage)
+      }
+      if (tokenSum !== 100) {
+        setError(`tokens.${i}.beneficiaries`, {
+          type: 'manual',
+          message: 'Field values must add up to 100.',
+        })
+        console.log('sum', tokenSum)
+        return false
+      }
+    }
+    for (let i = 0; i < data.erc1155s.length; i += 1) {
+      let erc1155Sum = 0
+      for (let j = 0; j < data.erc1155s[i].beneficiaries.length; j += 1) {
+        erc1155Sum += Number(data.erc1155s[i].beneficiaries[j].percentage)
+      }
+      if (erc1155Sum !== 100) {
+        setError(`erc1155s.${i}.beneficiaries`, {
+          type: 'manual',
+          message: 'Field values must add up to 100.',
+        })
+        return false
+      }
+    }
+
+    return true
+  }
+
   const onSubmit = async (data): Promise<void> => {
     console.log(data)
+    validateFieldsSum(data)
+
     const newData = formatData(data)
     console.log(newData)
     await createWill(newData, sdk, safe)
@@ -86,6 +134,7 @@ function CreateForm(): React.ReactElement {
     <Container>
       <Title size="lg">Memento Mori</Title>
       <Title size="md">Your Tokens</Title>
+      {console.log(errors)}
       <BalancesTable balances={balances} addToken={appendToken} />
       <Title size="md">Create Will</Title>
 
@@ -182,7 +231,15 @@ function CreateForm(): React.ReactElement {
         </Row>
         <Title size="sm">Native Token Beneficiaries</Title>
         {nativeTokenFields.map((element, index) => {
-          return <BeneficiaryFields tokenType="nativeToken" nestIndex={index} control={control} />
+          return (
+            <BeneficiaryFields
+              tokenType="nativeToken"
+              nestIndex={index}
+              control={control}
+              errors={errors}
+              clearErrors={clearErrors}
+            />
+          )
         })}
 
         <Title size="sm">Tokens</Title>
@@ -212,7 +269,13 @@ function CreateForm(): React.ReactElement {
                   )}
                 />
               </Row>
-              <BeneficiaryFields tokenType="tokens" nestIndex={index} control={control} />
+              <BeneficiaryFields
+                tokenType="tokens"
+                nestIndex={index}
+                control={control}
+                errors={errors}
+                clearErrors={clearErrors}
+              />
             </div>
           )
         })}
@@ -254,7 +317,13 @@ function CreateForm(): React.ReactElement {
                   )}
                 />
               </Row>
-              <BeneficiaryFields tokenType="nfts" nestIndex={index} control={control} />
+              <BeneficiaryFields
+                tokenType="nfts"
+                nestIndex={index}
+                control={control}
+                errors={errors}
+                clearErrors={clearErrors}
+              />
             </div>
           )
         })}
@@ -311,12 +380,18 @@ function CreateForm(): React.ReactElement {
                       inputRef={ref}
                       label="token id"
                       name={`erc1155s.${index}.tokenId`}
-                      error={error.message}
+                      error={error?.type}
                     />
                   )}
                 />
               </Row>
-              <BeneficiaryFields tokenType="erc1155s" nestIndex={index} control={control} />
+              <BeneficiaryFields
+                tokenType="erc1155s"
+                nestIndex={index}
+                control={control}
+                errors={errors}
+                clearErrors={clearErrors}
+              />
             </div>
           )
         })}
