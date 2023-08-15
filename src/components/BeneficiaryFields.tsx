@@ -44,7 +44,10 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
                   formState,
                 }) => (
                   <TextFieldInput
-                    onBlur={onBlur} // notify when input is touched
+                    onBlur={() => {
+                      onBlur()
+                      clearErrors()
+                    }} // notify when input is touched
                     onChange={onChange} // send value to hook form
                     inputRef={ref}
                     label={tokenType === 'nfts' ? 'token Id' : 'beneficiary address'}
@@ -53,7 +56,7 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
                         ? `${tokenType}.${nestIndex}.beneficiaries.${index}.tokenId`
                         : `${tokenType}.${nestIndex}.beneficiaries.${index}.address`
                     }
-                    error={error?.type}
+                    error={errors[tokenType] && errors[tokenType][nestIndex] && errors[tokenType][nestIndex].message}
                   />
                 )}
               />
@@ -63,7 +66,7 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
                 control={control}
                 name={
                   tokenType === 'nfts'
-                    ? `${tokenType}.${nestIndex}.beneficiaries.${index}.address`
+                    ? `${tokenType}.${nestIndex}.beneficiaries.${index}.beneficiary`
                     : `${tokenType}.${nestIndex}.beneficiaries.${index}.percentage`
                 }
                 render={({
@@ -89,6 +92,7 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
                       errors &&
                       errors[tokenType] &&
                       errors[tokenType][nestIndex] &&
+                      errors[tokenType][nestIndex].beneficiaries &&
                       errors[tokenType][nestIndex].beneficiaries.message
                     }
                   />

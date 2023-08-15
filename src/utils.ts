@@ -8,7 +8,7 @@ import { parse } from 'path'
 import ABI from './abis/dieSmart.json'
 import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, DisplayData } from './types'
 
-const MM_ADDRESS = '0xd9145CCE52D386f254917e481eB44e9943F39138'
+const MM_ADDRESS = '0x23f13137BbFd6BFa57dAfD66793E9c8Db17C085C'
 
 export function encodeTxData(native: NativeToken, tokens: Token[], nfts: NFT[], erc1155s: Erc1155[]): string {
   const dieSmartInterface = new Interface(ABI)
@@ -163,7 +163,7 @@ export const getWill = async (safe, sdk: SafeAppsSDK): Promise<DisplayData> => {
   const { native, tokens, nfts, erc1155s } = dieSmartInterface.decodeFunctionResult('getWill', data)[0]
   const response = await getUserInfo(safe.safeAddress)
   const userInfo = response.data[0].attributes
-  console.log('info', userInfo)
+  console.log('tokens', tokens)
   const nativeBeneficiaries = []
   for (let i = 0; i < native[0].length; i += 1) {
     const nativeBeneficiary = { address: '', percentage: null }
@@ -174,17 +174,19 @@ export const getWill = async (safe, sdk: SafeAppsSDK): Promise<DisplayData> => {
   const tokensArr = []
   for (let i = 0; i < tokens.length; i += 1) {
     const token = { contractAddress: '', beneficiaries: [] }
-    const tokenBeneficiary = { address: '', percentage: null }
-    token.contractAddress = tokens[i][0]
 
+    token.contractAddress = tokens[i][0]
+    if (token.contractAddress === ZeroAddress) break
     for (let j = 0; j < tokens[i][1].length; j += 1) {
-      tokenBeneficiary.address = tokens[i][1]
-      tokenBeneficiary.percentage = tokens[i][2]
+      const tokenBeneficiary = { address: '', percentage: null }
+      console.log(tokens[i][1][j])
+      tokenBeneficiary.address = tokens[i][1][j]
+      tokenBeneficiary.percentage = tokens[i][2][j]
       token.beneficiaries.push(tokenBeneficiary)
     }
     if (token.contractAddress !== ZeroAddress) tokensArr.push(token)
   }
-  console.log(tokensArr)
+  console.log('tarr', tokensArr)
   const nftsArr = []
   for (let i = 0; i < nfts.length; i += 1) {
     const nft = { contractAddress: '', beneficiaries: [] }
@@ -202,11 +204,12 @@ export const getWill = async (safe, sdk: SafeAppsSDK): Promise<DisplayData> => {
   const erc1155sArr = []
   for (let i = 0; i < erc1155s.length; i += 1) {
     const erc1155 = { contractAddress: '', tokenId: null, beneficiaries: [] }
-    const erc1155Beneficiary = { address: '', percentage: null }
+
     erc1155.contractAddress = erc1155s[i][0]
     if (erc1155.contractAddress === ZeroAddress) break
     erc1155.tokenId = erc1155s[i][1]
     for (let j = 0; j < erc1155s[i][2].length; j += 1) {
+      const erc1155Beneficiary = { address: '', percentage: null }
       erc1155Beneficiary.address = erc1155s[i][2][j]
       erc1155Beneficiary.percentage = erc1155s[i][3][j]
       erc1155.beneficiaries.push(erc1155Beneficiary)

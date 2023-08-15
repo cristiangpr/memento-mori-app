@@ -75,7 +75,7 @@ function CreateForm(): React.ReactElement {
     name: 'erc1155s',
   })
 
-  const validateFieldsSum = (data) => {
+  const validateFieldsSum = async (data) => {
     let nativeSum = 0
     for (let i = 0; i < data.nativeToken[0].beneficiaries.length; i += 1) {
       nativeSum += Number(data.nativeToken[0].beneficiaries[i].percentage)
@@ -119,13 +119,117 @@ function CreateForm(): React.ReactElement {
     return true
   }
 
+  const validateDuplicates = async (data) => {
+    for (let i = 0; i < data.nativeToken[0].beneficiaries.length; i += 1) {
+      for (let j = i + 1; j < data.nativeToken[0].beneficiaries.length; j += 1) {
+        if (data.nativeToken[0].beneficiaries[i].address === data.nativeToken[0].beneficiaries[j].address) {
+          setError(`nativeToken.${i}`, {
+            type: 'manual',
+            message: 'Beneficiary addresses must be unique.',
+          })
+          return false
+        }
+      }
+    }
+    if (data.tokens.length > 0) {
+      for (let i = 0; i < data.tokens.length; i += 1) {
+        for (let j = i + 1; j < data.tokens.length; j += 1) {
+          if (data.tokens[i].contractAddress === data.tokens[j].contractAddress) {
+            setError(`tokens.${j}.contractAddress`, {
+              type: 'manual',
+              message: 'Token addresses must be unique.',
+            })
+
+            return false
+          }
+        }
+      }
+
+      for (let i = 0; i < data.tokens.length; i += 1) {
+        for (let j = 0; j < data.tokens[i].beneficiaries.length; j += 1) {
+          for (let k = j + 1; k < data.tokens[i].beneficiaries.length; k += 1) {
+            if (data.tokens[i].beneficiaries[j].address === data.tokens[i].beneficiaries[k].address) {
+              setError(`tokens.${i}`, {
+                type: 'manual',
+                message: 'Beneficiary addresses must be unique.',
+              })
+
+              return false
+            }
+          }
+        }
+      }
+    }
+    if (data.nfts.length > 0) {
+      for (let i = 0; i < data.nfts.length; i += 1) {
+        for (let j = i + 1; j < data.nfts.length; j += 1) {
+          if (data.nfts[i].contractAddress === data.nfts[j].contractAddress) {
+            setError(`nfts.${j}.contractAddress`, {
+              type: 'manual',
+              message: 'Token addresses must be unique.',
+            })
+
+            return false
+          }
+        }
+      }
+      for (let i = 0; i < data.nfts.length; i += 1) {
+        for (let j = 0; j < data.nfts[i].beneficiaries.length; j += 1) {
+          for (let k = j + 1; k < data.nfts[i].beneficiaries.length; k += 1) {
+            if (data.nfts[i].beneficiaries[j].beneficiary === data.tokens[i].beneficiaries[k].beneficiary) {
+              setError(`nfts.${i}.beneficiaries.${k}`, {
+                type: 'manual',
+                message: 'Beneficiary addresses must be unique.',
+              })
+
+              return false
+            }
+          }
+        }
+      }
+    }
+    if (data.erc1155s.length > 0) {
+      for (let i = 0; i < data.erc1155s.length; i += 1) {
+        for (let j = i + 1; j < data.erc1155s.length; j += 1) {
+          if (data.erc1155s[i].contractAddress === data.erc1155s[j].contractAddress) {
+            setError(`erc1155s.${j}.contractAddress`, {
+              type: 'manual',
+              message: 'Token addresses must be unique.',
+            })
+
+            return false
+          }
+        }
+      }
+
+      for (let i = 0; i < data.erc1155s.length; i += 1) {
+        for (let j = 0; j < data.erc1155s[i].beneficiaries.length; j += 1) {
+          for (let k = j + 1; k < data.erc1155s[i].beneficiaries.length; k += 1) {
+            if (data.erc1155s[i].beneficiaries[j].address === data.erc1155s[i].beneficiaries[k].address) {
+              setError(`erc1155s.${i}.beneficiaries.${k}`, {
+                type: 'manual',
+                message: 'Beneficiary addresses must be unique.',
+              })
+
+              return false
+            }
+          }
+        }
+      }
+    }
+
+    return true
+  }
+
   const onSubmit = async (data): Promise<void> => {
     console.log(data)
-    validateFieldsSum(data)
-
-    const newData = formatData(data)
-    console.log(newData)
-    await createWill(newData, sdk, safe)
+    const sumValidated = await validateFieldsSum(data)
+    const validated = await validateDuplicates(data)
+    if (validated && sumValidated) {
+      const newData = formatData(data)
+      console.log(newData)
+      await createWill(newData, sdk, safe)
+    }
   }
   const handleScroll = (e: FormEvent<HTMLInputElement>) => {
     e.currentTarget.blur()
@@ -264,7 +368,11 @@ function CreateForm(): React.ReactElement {
                       label="contract address"
                       name={`tokens.${index}.contractAddress`}
                       value={value}
-                      error={error?.type}
+                      error={
+                        errors && errors.tokens && errors.tokens[index] && errors.tokens[index].contractAddress
+                          ? errors.tokens[index].contractAddress.message
+                          : error?.type
+                      }
                     />
                   )}
                 />
