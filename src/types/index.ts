@@ -37,34 +37,28 @@ export type UserInfo = {
 }
 
 export enum Form {
-  FirstName = 'firstName',
-  Initial = 'initial',
-  LastName = 'lastName',
-  BirthDate = 'birthDate',
+  Cooldown = 'cooldown',
   NativeToken = 'nativeToken',
   Tokens = 'tokens',
   NFTS = 'nfts',
   Erc1155s = 'erc1155s',
+  Executors = 'executors',
 }
 
 export interface FormTypes {
-  [Form.FirstName]: string
-  [Form.Initial]: string
-  [Form.LastName]: string
-  [Form.BirthDate]: string
+  [Form.Cooldown]: string
   [Form.NativeToken]: NativeToken[]
   [Form.Erc1155s]: Erc1155[]
   [Form.Tokens]: Token[]
   [Form.NFTS]: NFT[]
+  [Form.Executors]: string[]
 }
 
 export type DisplayData = {
-  firstName?: string
-  initial?: string
-  lastName?: string
-  birthDate?: string
+  cooldown: string
   nativeToken: NativeToken
   tokens?: Token[]
   nfts?: NFT[]
   erc1155s?: Erc1155[]
+  executors: string[]
 }

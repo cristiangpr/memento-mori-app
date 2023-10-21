@@ -28,10 +28,8 @@ function CreateForm(): React.ReactElement {
     formState: { errors },
   } = useForm<FormTypes>({
     defaultValues: {
-      [Form.FirstName]: '',
-      [Form.Initial]: '',
-      [Form.LastName]: '',
-      [Form.BirthDate]: '',
+      [Form.Cooldown]: '',
+
       [Form.NativeToken]: [
         {
           beneficiaries: [{ address: '', percentage: null }],
@@ -243,12 +241,12 @@ function CreateForm(): React.ReactElement {
       <Title size="md">Create Will</Title>
 
       <WillForm onSubmit={handleSubmit(onSubmit)}>
-        <Title size="sm">User Info</Title>
+        <Title size="sm">Cooldown Period</Title>
         <Row>
           <LeftColumn>
             <Controller
               control={control}
-              name="firstName"
+              name="cooldown"
               rules={{ required: true }}
               render={({
                 field: { onChange, onBlur, value, name, ref },
@@ -259,80 +257,16 @@ function CreateForm(): React.ReactElement {
                   onBlur={onBlur} // notify when input is touched
                   onChange={onChange} // send value to hook form
                   inputRef={ref}
-                  label="first name"
-                  name="firstName"
+                  label="cooldown period in milliseconds"
+                  name="cooldown"
                   error={error?.type}
                   showErrorsInTheLabel
                 />
               )}
             />
           </LeftColumn>
-          <RightColumn>
-            <Controller
-              control={control}
-              name="initial"
-              rules={{ required: true }}
-              render={({
-                field: { onChange, onBlur, value, name, ref },
-                fieldState: { invalid, isTouched, isDirty, error },
-                formState,
-              }) => (
-                <TextFieldInput
-                  onBlur={onBlur} // notify when input is touched
-                  onChange={onChange} // send value to hook form
-                  inputRef={ref}
-                  label="initial"
-                  name="initial"
-                  error={error?.type}
-                />
-              )}
-            />
-          </RightColumn>
         </Row>
-        <Row>
-          <LeftColumn>
-            <Controller
-              control={control}
-              name="lastName"
-              rules={{ required: true }}
-              render={({
-                field: { onChange, onBlur, value, name, ref },
-                fieldState: { invalid, isTouched, isDirty, error },
-                formState,
-              }) => (
-                <TextFieldInput
-                  onBlur={onBlur} // notify when input is touched
-                  onChange={onChange} // send value to hook form
-                  inputRef={ref}
-                  label="last name"
-                  name="lastName"
-                  error={error?.type}
-                />
-              )}
-            />
-          </LeftColumn>
-          <RightColumn>
-            <Controller
-              control={control}
-              name="birthDate"
-              rules={{ required: true }}
-              render={({
-                field: { onChange, onBlur, value, name, ref },
-                fieldState: { invalid, isTouched, isDirty, error },
-                formState,
-              }) => (
-                <TextFieldInput
-                  onBlur={onBlur} // notify when input is touched
-                  onChange={onChange} // send value to hook form
-                  inputRef={ref}
-                  label="date of birth dd/mm/yyyy"
-                  name="birthDate"
-                  error={error?.type}
-                />
-              )}
-            />
-          </RightColumn>
-        </Row>
+
         <Title size="sm">Native Token Beneficiaries</Title>
         {nativeTokenFields.map((element, index) => {
           return (

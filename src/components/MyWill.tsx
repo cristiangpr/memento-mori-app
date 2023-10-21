@@ -21,27 +21,9 @@ function MyWill(): React.ReactElement {
       {data && (
         <>
           <Will>
-            <Title size="md">User Info</Title>
-            <Row>
-              <LeftColumn>
-                <Title size="sm">Firts Name</Title>
-                <div>{data.firstName}</div>
-              </LeftColumn>
-              <RightColumn>
-                <Title size="sm">Initial</Title>
-                <div>{data.initial}</div>
-              </RightColumn>
-            </Row>
-            <Row>
-              <LeftColumn>
-                <Title size="sm">Last Name</Title>
-                <div>{data.lastName}</div>
-              </LeftColumn>
-              <RightColumn>
-                <Title size="sm">Date of Birth</Title>
-                <div>{data.birthDate}</div>
-              </RightColumn>
-            </Row>
+            {console.log(data)}
+            <Title size="md">Cooldown Period</Title>
+            <div>{data.cooldown.toString()}</div>
             <Title size="md">Native Token</Title>
             {data &&
               data.nativeToken.beneficiaries.map((element) => {

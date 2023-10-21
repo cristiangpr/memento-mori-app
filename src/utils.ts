@@ -5,17 +5,24 @@ import { Contract, Interface, ZeroAddress, ethers } from 'ethers'
 import { BaseTransaction, SendTransactionsParams } from '@safe-global/safe-apps-sdk'
 import SafeAppsSDK from '@safe-global/safe-apps-sdk/dist/src/sdk'
 import { parse } from 'path'
-import ABI from './abis/dieSmart.json'
+import ABI from './abis/mementoMori.json'
 import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, DisplayData } from './types'
 
-const MM_ADDRESS = '0x23f13137BbFd6BFa57dAfD66793E9c8Db17C085C'
+const MM_ADDRESS = '0x78653040E11E13c74349181915185a2ed0096472'
 
-export function encodeTxData(native: NativeToken, tokens: Token[], nfts: NFT[], erc1155s: Erc1155[]): string {
+export const encodeTxData = (
+  cooldown: string,
+  native: NativeToken,
+  tokens: Token[],
+  nfts: NFT[],
+  erc1155s: Erc1155[],
+  executors: string[],
+): string => {
   const dieSmartInterface = new Interface(ABI)
-  return dieSmartInterface.encodeFunctionData('createWill', [native, tokens, nfts, erc1155s])
+  return dieSmartInterface.encodeFunctionData('createWill', [cooldown, native, tokens, nfts, erc1155s, executors])
 }
 
-export async function saveWill(postData: UserInfo) {
+export const saveWill = async (postData: UserInfo) => {
   console.log('token', process.env.REACT_APP_STRAPI_TOKEN)
   const response = await fetch('https://iwill-strapi.herokuapp.com/api/wills', {
     method: 'POST',
@@ -24,7 +31,7 @@ export async function saveWill(postData: UserInfo) {
   })
 }
 
-export async function getUserInfo(address: string) {
+export const getUserInfo = async (address: string) => {
   console.log('token', process.env.REACT_APP_STRAPI_TOKEN)
   const response = await fetch(
     `https://iwill-strapi.herokuapp.com/api/wills?filters[address][$eq]=${address}&paginationl[start]=0&pagination[limit]=1`,
@@ -36,13 +43,15 @@ export async function getUserInfo(address: string) {
   return response.json()
 }
 
-export function formatData(data) {
+export const formatData = (data: FormTypes) => {
   const newData = JSON.parse(JSON.stringify(data))
+  const executors = []
   const nativeBeneficiaries = []
   const nativePercentages = []
   for (let i = 0; i < newData.nativeToken[0].beneficiaries.length; i += 1) {
     nativeBeneficiaries.push(newData.nativeToken[0].beneficiaries[i].address)
     nativePercentages.push(Number(newData.nativeToken[0].beneficiaries[i].percentage))
+    executors.push(newData.nativeToken[0].beneficiaries[i].address)
   }
   newData.nativeToken[0].beneficiaries = nativeBeneficiaries
   newData.nativeToken[0].percentages = nativePercentages
@@ -55,6 +64,7 @@ export function formatData(data) {
     for (let j = 0; j < newData.tokens[i].beneficiaries.length; j += 1) {
       tokenBeneficiaries.push(newData.tokens[i].beneficiaries[j].address)
       tokenPercentages.push(newData.tokens[i].beneficiaries[j].percentage)
+      executors.push(newData.tokens[i].beneficiaries[j].address)
     }
     newData.tokens[i].beneficiaries = tokenBeneficiaries
 
@@ -72,6 +82,7 @@ export function formatData(data) {
     const nftIds = []
     for (let j = 0; j < newData.nfts[i].beneficiaries.length; j += 1) {
       nftBeneficiaries.push(newData.nfts[i].beneficiaries[j].beneficiary)
+      executors.push(newData.nfts[i].beneficiaries[j].beneficiary)
 
       nftIds.push(newData.nfts[i].beneficiaries[j].tokenId)
     }
@@ -92,16 +103,20 @@ export function formatData(data) {
     for (let j = 0; j < newData.erc1155s[i].beneficiaries.length; j += 1) {
       erc1155Beneficiaries.push(newData.erc1155s[i].beneficiaries[j].address)
       erc1155Percentages.push(newData.erc1155s[i].beneficiaries[j].percentage)
+      executors.push(newData.erc1155s[i].beneficiaries[j].address)
     }
     newData.erc1155s[i].beneficiaries = erc1155Beneficiaries
 
     newData.erc1155s[i].percentages = erc1155Percentages
   }
+  const uniqueExecutors = [...new Set(executors)]
+  newData.executors = uniqueExecutors
+
   return newData
 }
 
-export async function createWill(data: FormTypes, sdk, safe) {
-  const txData = encodeTxData(data.nativeToken[0], data.tokens, data.nfts, data.erc1155s)
+export const createWill = async (data: FormTypes, sdk, safe) => {
+  const txData = encodeTxData(data.cooldown, data.nativeToken[0], data.tokens, data.nfts, data.erc1155s, data.executors)
   const createWillTransaction: BaseTransaction = {
     to: MM_ADDRESS,
     value: '10000000',
@@ -139,16 +154,6 @@ export async function createWill(data: FormTypes, sdk, safe) {
       params,
     })
   }
-
-  const postData = {
-    firstName: data.firstName,
-    initial: data.initial,
-    lastName: data.lastName,
-    birthDate: data.birthDate,
-    address: safe.safeAddress,
-  }
-  const res = await saveWill(postData)
-  console.log(res)
 }
 
 export const getWill = async (safe, sdk: SafeAppsSDK): Promise<DisplayData> => {
@@ -160,10 +165,12 @@ export const getWill = async (safe, sdk: SafeAppsSDK): Promise<DisplayData> => {
     data: getWillData,
   }
   const data = await sdk.eth.call([getWillTransaction])
-  const { native, tokens, nfts, erc1155s } = dieSmartInterface.decodeFunctionResult('getWill', data)[0]
-  const response = await getUserInfo(safe.safeAddress)
-  const userInfo = response.data[0].attributes
-  console.log('tokens', tokens)
+  const { cooldown, native, tokens, nfts, erc1155s, executors } = dieSmartInterface.decodeFunctionResult(
+    'getWill',
+    data,
+  )[0]
+
+  console.log('cooldown', cooldown)
   const nativeBeneficiaries = []
   for (let i = 0; i < native[0].length; i += 1) {
     const nativeBeneficiary = { address: '', percentage: null }
@@ -186,7 +193,7 @@ export const getWill = async (safe, sdk: SafeAppsSDK): Promise<DisplayData> => {
     }
     if (token.contractAddress !== ZeroAddress) tokensArr.push(token)
   }
-  console.log('tarr', tokensArr)
+  console.log('exex', executors)
   const nftsArr = []
   for (let i = 0; i < nfts.length; i += 1) {
     const nft = { contractAddress: '', beneficiaries: [] }
@@ -218,14 +225,13 @@ export const getWill = async (safe, sdk: SafeAppsSDK): Promise<DisplayData> => {
   }
 
   return {
-    firstName: userInfo.firstName,
-    initial: userInfo.initial,
-    lastName: userInfo.lastName,
-    birthDate: userInfo.birthDate,
+    cooldown,
+
     nativeToken: { beneficiaries: nativeBeneficiaries },
     tokens: tokensArr,
     nfts: nftsArr,
     erc1155s: erc1155sArr,
+    executors,
   }
 }
 
@@ -240,5 +246,31 @@ export const executeWill = async (sdk, safe) => {
   const params = { safeTxGas: 500000000 }
   await sdk.txs.send({
     txs: [executeWillTransaction],
+  })
+}
+
+export const requestExecution = async (owner, sdk) => {
+  const mmInterface = new Interface(ABI)
+  const requestData = mmInterface.encodeFunctionData('requestExecution', [owner])
+  const requestTransaction: BaseTransaction = {
+    to: MM_ADDRESS,
+    value: '0',
+    data: requestData,
+  }
+  await sdk.txs.send({
+    txs: [requestTransaction],
+  })
+}
+
+export const cancelExecution = async (sdk) => {
+  const mmInterface = new Interface(ABI)
+  const cancelData = mmInterface.encodeFunctionData('cancelExecution')
+  const cancelTransaction: BaseTransaction = {
+    to: MM_ADDRESS,
+    value: '0',
+    data: cancelData,
+  }
+  await sdk.txs.send({
+    txs: [cancelTransaction],
   })
 }
