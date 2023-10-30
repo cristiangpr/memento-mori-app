@@ -1,5 +1,5 @@
 /* eslint-disable no-param-reassign */
-import React, { FormEvent, useState } from 'react'
+import React, { FormEvent, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { Title, Button, TextFieldInput, Tab, Menu } from '@gnosis.pm/safe-react-components'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
@@ -7,8 +7,8 @@ import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import { ZeroAddress } from 'ethers'
 import { useSafeBalances } from '../hooks/useSafeBalances'
 import BalancesTable from './BalancesTable'
-import { Form, FormTypes } from '../types'
-import { createWill, formatData } from '../utils'
+import { DisplayData, Form, FormTypes } from '../types'
+import { createWill, deleteWill, executeWill, formatData, getExecTime, getWill, requestExecution } from '../utils'
 import { Container, Row, LeftColumn, RightColumn, WillForm } from './FormElements'
 // eslint-disable-next-line import/no-cycle
 import BeneficiaryFields from './BeneficiaryFields'
@@ -16,6 +16,11 @@ import BeneficiaryFields from './BeneficiaryFields'
 function CreateForm(): React.ReactElement {
   const { sdk, safe } = useSafeAppsSDK()
   const [balances] = useSafeBalances(sdk)
+  const [displayData, setDisplayData] = useState<DisplayData>()
+  const [isExecutable, setIsExecutable] = useState<boolean>(false)
+  const [execTime, setExecTime] = useState<number>()
+  const [hasWill, setHasWill] = useState<boolean>(false)
+
   const {
     register,
     setValue,
@@ -25,10 +30,11 @@ function CreateForm(): React.ReactElement {
     control,
     setError,
     clearErrors,
+    reset,
     formState: { errors },
   } = useForm<FormTypes>({
     defaultValues: {
-      [Form.Cooldown]: '',
+      [Form.Cooldown]: null,
 
       [Form.NativeToken]: [
         {
@@ -36,11 +42,39 @@ function CreateForm(): React.ReactElement {
         },
       ],
 
-      [Form.Tokens]: [],
-      [Form.NFTS]: [],
-      [Form.Erc1155s]: [],
+      [Form.Tokens]: displayData ? displayData.tokens : [],
+      [Form.NFTS]: displayData ? displayData.nfts : [],
+      [Form.Erc1155s]: displayData ? displayData.erc1155s : [],
     },
   })
+  useEffect(() => {
+    const loadData = async () => {
+      const data = await getWill(safe.safeAddress, sdk)
+      setDisplayData(data)
+      if (displayData && displayData.executors.length > 0) {
+        setHasWill(true)
+      }
+      if (displayData && displayData.isActive) {
+        setExecTime(getExecTime(displayData))
+        if (getExecTime(displayData) <= Date.now()) {
+          setIsExecutable(true)
+        }
+      }
+    }
+    loadData()
+  }, [displayData, safe, sdk])
+  useEffect(() => {
+    if (hasWill) {
+      reset({
+        cooldown: Number(displayData.cooldown),
+        nativeToken: [displayData.nativeToken],
+        tokens: displayData.tokens,
+        nfts: displayData.nfts,
+        erc1155s: displayData.erc1155s,
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reset, hasWill])
 
   const { fields: nativeTokenFields } = useFieldArray({
     control,
@@ -96,7 +130,7 @@ function CreateForm(): React.ReactElement {
           type: 'manual',
           message: 'Field values must add up to 100.',
         })
-        console.log('sum', tokenSum)
+
         return false
       }
     }
@@ -220,12 +254,11 @@ function CreateForm(): React.ReactElement {
   }
 
   const onSubmit = async (data): Promise<void> => {
-    console.log(data)
     const sumValidated = await validateFieldsSum(data)
     const validated = await validateDuplicates(data)
     if (validated && sumValidated) {
-      const newData = formatData(data)
-      console.log(newData)
+      const newData = formatData(data, safe.safeAddress)
+
       await createWill(newData, sdk, safe)
     }
   }
@@ -234,11 +267,11 @@ function CreateForm(): React.ReactElement {
   }
   return (
     <Container>
+      {console.log('get', displayData)}
       <Title size="lg">Memento Mori</Title>
       <Title size="md">Your Tokens</Title>
-      {console.log(errors)}
       <BalancesTable balances={balances} addToken={appendToken} />
-      <Title size="md">Create Will</Title>
+      <Title size="md">{displayData ? 'My Will' : 'Create Will'}</Title>
 
       <WillForm onSubmit={handleSubmit(onSubmit)}>
         <Title size="sm">Cooldown Period</Title>
@@ -254,10 +287,12 @@ function CreateForm(): React.ReactElement {
                 formState,
               }) => (
                 <TextFieldInput
+                  value={value}
+                  type="number"
                   onBlur={onBlur} // notify when input is touched
                   onChange={onChange} // send value to hook form
-                  inputRef={ref}
-                  label="cooldown period in milliseconds"
+                  ref={ref}
+                  label={displayData ? '' : 'cooldown period in milliseconds'}
                   name="cooldown"
                   error={error?.type}
                   showErrorsInTheLabel
@@ -452,9 +487,36 @@ function CreateForm(): React.ReactElement {
         )}
         <Row style={{ justifyContent: 'center' }}>
           <Button size="md" type="submit">
-            Create Will
+            {hasWill ? 'Update Will' : 'Create Will'}
           </Button>
         </Row>
+        {hasWill && (
+          <>
+            <Row style={{ justifyContent: 'center' }}>
+              <Button size="md" onClick={() => deleteWill(sdk)}>
+                Delete Will
+              </Button>
+            </Row>
+            <Row style={{ justifyContent: 'center' }}>
+              <Button size="md" onClick={() => requestExecution(safe.safeAddress, sdk)}>
+                Request Execution
+              </Button>
+            </Row>
+          </>
+        )}
+
+        {execTime && (
+          <div style={{ padding: '20px' }}>
+            <div>Will executable after {new Date(execTime).toDateString()}</div>
+          </div>
+        )}
+        {isExecutable && (
+          <div style={{ padding: '20px' }}>
+            <Button size="md" onClick={() => executeWill(safe.safeAddress, sdk)}>
+              Execute Will
+            </Button>
+          </div>
+        )}
       </WillForm>
     </Container>
   )

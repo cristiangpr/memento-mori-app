@@ -6,7 +6,7 @@ function Navbar(): React.ReactElement {
     <Nav>
       <NavMenu>
         <NavLink to="/">Create Will</NavLink>
-        <NavLink to="/mywill">My Will</NavLink>
+        <NavLink to="/execute">Execute</NavLink>
 
         {/* Second Nav */}
         {/* <NavBtnLink to='/sign-in'>Sign In</NavBtnLink> */}

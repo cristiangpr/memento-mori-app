@@ -1,24 +1,54 @@
 import React, { useEffect, useState } from 'react'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
-import { Title, Button } from '@gnosis.pm/safe-react-components'
-import { executeWill, getWill } from '../utils'
+import { Title, Button, TextFieldInput } from '@gnosis.pm/safe-react-components'
+import { executeWill, getExecTime, getWill, getIsExecutor, requestExecution } from '../utils'
 import { DisplayData } from '../types'
-import { Container, LeftColumn, RightColumn, Row, Will } from './FormElements'
+import { Container, LeftColumn, RightColumn, Row, Will, WillForm } from './FormElements'
 
-function MyWill(): React.ReactElement {
+function Execute(): React.ReactElement {
   const [data, setData] = useState<DisplayData>()
+  const [ownerAddress, setOwnerAddress] = useState<string>()
+  const [isExecutor, setIsExecutor] = useState<boolean>(false)
+  const [isExecutable, setIsExecutable] = useState<boolean>(false)
+  const [execTime, setExecTime] = useState<number>()
+
   const { safe, sdk } = useSafeAppsSDK()
+
+  const loadData = async () => {
+    const displayData = await getWill(ownerAddress, sdk)
+    setData(displayData)
+  }
+
   useEffect(() => {
-    const loadData = async () => {
-      const displayData = await getWill(safe.safeAddress, sdk)
-      setData(displayData)
+    if (data) {
+      setIsExecutor(getIsExecutor(data, safe))
     }
-    loadData()
-  }, [safe, sdk])
+    if (data && data.isActive) {
+      setExecTime(getExecTime(data))
+      if (getExecTime(data) <= Date.now()) {
+        setIsExecutable(true)
+      }
+    }
+  }, [data, safe])
+
   return (
     <Container>
-      <Title size="lg">My Will</Title>
-      {data && (
+      <Title size="lg">Execute</Title>
+      <Title size="sm">Enter owner address to find will and request execution</Title>
+      <div style={{ width: '50%', padding: '1rem' }}>
+        <TextFieldInput
+          value={ownerAddress}
+          onChange={(e) => setOwnerAddress(e.target.value)}
+          name="ownerAddress"
+          label="owner address"
+        />
+      </div>
+      <div>
+        <Button size="md" onClick={() => loadData()}>
+          Find Will
+        </Button>
+      </div>
+      {data.executors.length > 0 ? (
         <>
           <Will>
             {console.log(data)}
@@ -134,15 +164,31 @@ function MyWill(): React.ReactElement {
                 )
               })}
           </Will>
-          <div style={{ padding: '20px' }}>
-            <Button size="md" onClick={() => executeWill(sdk, safe)}>
-              Execute Will
-            </Button>
-          </div>
+          {isExecutor && (
+            <div style={{ padding: '20px' }}>
+              <Button size="md" onClick={() => requestExecution(ownerAddress, sdk)}>
+                Request Execution
+              </Button>
+            </div>
+          )}
+          {execTime && (
+            <div style={{ padding: '20px' }}>
+              <div>Will executable after {new Date(execTime).toDateString()}</div>
+            </div>
+          )}
+          {isExecutable && (
+            <div style={{ padding: '20px' }}>
+              <Button size="md" onClick={() => executeWill(ownerAddress, sdk)}>
+                Execute Will
+              </Button>
+            </div>
+          )}
         </>
+      ) : (
+        <Title size="md">Will not found</Title>
       )}
     </Container>
   )
 }
 
-export default MyWill
+export default Execute

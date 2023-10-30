@@ -44,6 +44,7 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
                   formState,
                 }) => (
                   <TextFieldInput
+                    value={tokenType === 'nfts' ? Number(value) : value}
                     onBlur={() => {
                       onBlur()
                       clearErrors()
@@ -51,6 +52,11 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
                     onChange={onChange} // send value to hook form
                     inputRef={ref}
                     label={tokenType === 'nfts' ? 'token Id' : 'beneficiary address'}
+                    helperText={
+                      tokenType === 'nfts'
+                        ? ''
+                        : 'Make sure at least one beneficiary is a Safe in order to request execution using this app. Non Safe addresses can request execution by interacting directly with the contract.'
+                    }
                     name={
                       tokenType === 'nfts'
                         ? `${tokenType}.${nestIndex}.beneficiaries.${index}.tokenId`
@@ -75,6 +81,7 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
                   formState,
                 }) => (
                   <TextFieldInput
+                    value={tokenType === 'nfts' ? value : Number(value)}
                     onBlur={() => {
                       onBlur()
                       clearErrors()
@@ -104,7 +111,7 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
       })}
 
       <div style={{ marginBottom: !isNative && '10px' }}>
-        <Button size="md" onClick={() => appendBeneficiary({})}>
+        <Button size="md" onClick={() => appendBeneficiary({ address: '', percentage: null })}>
           {tokenType === 'nfts' ? 'Add Token Id' : 'Add Beneficiary'}
         </Button>
         {beneficiaryFields.length > 1 && (

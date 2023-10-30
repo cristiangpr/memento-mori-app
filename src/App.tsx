@@ -14,6 +14,7 @@ import BeneficiaryFields from './components/BeneficiaryFields'
 import Navbar from './components/Navbar'
 import CreateForm from './components/CreateForm'
 import MyWill from './components/MyWill'
+import Execute from './components/Execute'
 
 const Container = styled.div`
   padding: 1rem;
@@ -69,7 +70,8 @@ function SafeApp(): React.ReactElement {
       <Navbar />
       <Routes>
         <Route path="/" element={<CreateForm />} />
-        <Route path="/myWill" element={<MyWill />} />
+
+        <Route path="/execute" element={<Execute />} />
       </Routes>
     </BrowserRouter>
   )

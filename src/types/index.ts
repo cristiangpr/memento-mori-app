@@ -1,3 +1,5 @@
+import { BigNumberish } from 'ethers'
+
 export type Beneficiary = {
   address: string
   percentage: number
@@ -46,7 +48,7 @@ export enum Form {
 }
 
 export interface FormTypes {
-  [Form.Cooldown]: string
+  [Form.Cooldown]: number
   [Form.NativeToken]: NativeToken[]
   [Form.Erc1155s]: Erc1155[]
   [Form.Tokens]: Token[]
@@ -55,7 +57,9 @@ export interface FormTypes {
 }
 
 export type DisplayData = {
-  cooldown: string
+  isActive: boolean
+  requestTime: number
+  cooldown: number
   nativeToken: NativeToken
   tokens?: Token[]
   nfts?: NFT[]

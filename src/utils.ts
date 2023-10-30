@@ -8,10 +8,10 @@ import { parse } from 'path'
 import ABI from './abis/mementoMori.json'
 import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, DisplayData } from './types'
 
-const MM_ADDRESS = '0x78653040E11E13c74349181915185a2ed0096472'
+const MM_ADDRESS = '0x464967E09BD5bfE4D5d2193a3cF53893Af1A9f03'
 
 export const encodeTxData = (
-  cooldown: string,
+  cooldown: number,
   native: NativeToken,
   tokens: Token[],
   nfts: NFT[],
@@ -23,7 +23,6 @@ export const encodeTxData = (
 }
 
 export const saveWill = async (postData: UserInfo) => {
-  console.log('token', process.env.REACT_APP_STRAPI_TOKEN)
   const response = await fetch('https://iwill-strapi.herokuapp.com/api/wills', {
     method: 'POST',
     headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
@@ -32,7 +31,6 @@ export const saveWill = async (postData: UserInfo) => {
 }
 
 export const getUserInfo = async (address: string) => {
-  console.log('token', process.env.REACT_APP_STRAPI_TOKEN)
   const response = await fetch(
     `https://iwill-strapi.herokuapp.com/api/wills?filters[address][$eq]=${address}&paginationl[start]=0&pagination[limit]=1`,
     {
@@ -43,7 +41,7 @@ export const getUserInfo = async (address: string) => {
   return response.json()
 }
 
-export const formatData = (data: FormTypes) => {
+export const formatData = (data: FormTypes, ownerAddress: string) => {
   const newData = JSON.parse(JSON.stringify(data))
   const executors = []
   const nativeBeneficiaries = []
@@ -110,6 +108,10 @@ export const formatData = (data: FormTypes) => {
     newData.erc1155s[i].percentages = erc1155Percentages
   }
   const uniqueExecutors = [...new Set(executors)]
+  uniqueExecutors.push(ownerAddress)
+  uniqueExecutors.filter((address) => {
+    return address !== ZeroAddress
+  })
   newData.executors = uniqueExecutors
 
   return newData
@@ -130,9 +132,7 @@ export const createWill = async (data: FormTypes, sdk, safe) => {
     data: isModuleEnabledData,
   }
   const isEnabledData = await sdk.eth.call([isModuleEnabledParams])
-  console.log(isEnabledData)
   const isEnabled = isEnabledData !== '0x0000000000000000000000000000000000000000000000000000000000000000'
-  console.log(isEnabled)
   if (isEnabled) {
     const safeCreateWillTransaction = await sdk.txs.send({
       txs: [createWillTransaction],
@@ -156,21 +156,18 @@ export const createWill = async (data: FormTypes, sdk, safe) => {
   }
 }
 
-export const getWill = async (safe, sdk: SafeAppsSDK): Promise<DisplayData> => {
+export const getWill = async (address, sdk: SafeAppsSDK): Promise<DisplayData> => {
   const dieSmartInterface = new Interface(ABI)
-  const getWillData = dieSmartInterface.encodeFunctionData('getWill', [safe.safeAddress])
+  const getWillData = dieSmartInterface.encodeFunctionData('getWill', [address])
 
   const getWillTransaction = {
     to: MM_ADDRESS,
     data: getWillData,
   }
   const data = await sdk.eth.call([getWillTransaction])
-  const { cooldown, native, tokens, nfts, erc1155s, executors } = dieSmartInterface.decodeFunctionResult(
-    'getWill',
-    data,
-  )[0]
+  const { isActive, cooldown, requestTime, native, tokens, nfts, erc1155s, executors } =
+    dieSmartInterface.decodeFunctionResult('getWill', data)[0]
 
-  console.log('cooldown', cooldown)
   const nativeBeneficiaries = []
   for (let i = 0; i < native[0].length; i += 1) {
     const nativeBeneficiary = { address: '', percentage: null }
@@ -186,14 +183,14 @@ export const getWill = async (safe, sdk: SafeAppsSDK): Promise<DisplayData> => {
     if (token.contractAddress === ZeroAddress) break
     for (let j = 0; j < tokens[i][1].length; j += 1) {
       const tokenBeneficiary = { address: '', percentage: null }
-      console.log(tokens[i][1][j])
+
       tokenBeneficiary.address = tokens[i][1][j]
       tokenBeneficiary.percentage = tokens[i][2][j]
       token.beneficiaries.push(tokenBeneficiary)
     }
     if (token.contractAddress !== ZeroAddress) tokensArr.push(token)
   }
-  console.log('exex', executors)
+
   const nftsArr = []
   for (let i = 0; i < nfts.length; i += 1) {
     const nft = { contractAddress: '', beneficiaries: [] }
@@ -225,8 +222,9 @@ export const getWill = async (safe, sdk: SafeAppsSDK): Promise<DisplayData> => {
   }
 
   return {
+    isActive,
     cooldown,
-
+    requestTime,
     nativeToken: { beneficiaries: nativeBeneficiaries },
     tokens: tokensArr,
     nfts: nftsArr,
@@ -235,9 +233,43 @@ export const getWill = async (safe, sdk: SafeAppsSDK): Promise<DisplayData> => {
   }
 }
 
-export const executeWill = async (sdk, safe) => {
-  const dieSmartInterface = new Interface(ABI)
-  const executeData = dieSmartInterface.encodeFunctionData('execute', [safe.safeAddress, 500000000])
+export const executeWill = async (sdk, ownerAddress) => {
+  const mmInterface = new Interface(ABI)
+  const executeData = mmInterface.encodeFunctionData('execute', [ownerAddress, 500000000])
+  const executeWillTransaction: BaseTransaction = {
+    to: MM_ADDRESS,
+    value: '0',
+    data: executeData,
+  }
+  const params = { safeTxGas: 500000000 }
+  await sdk.txs.send({
+    txs: [executeWillTransaction],
+  })
+}
+
+export const executeWillByOwner = async (sdk, ownerAddress) => {
+  const mmInterface = new Interface(ABI)
+  const executeData = mmInterface.encodeFunctionData('execute', [ownerAddress, 500000000])
+  const executeWillTransaction: BaseTransaction = {
+    to: MM_ADDRESS,
+    value: '0',
+    data: executeData,
+  }
+  const requestData = mmInterface.encodeFunctionData('requestExecution', [ownerAddress])
+  const requestTransaction: BaseTransaction = {
+    to: MM_ADDRESS,
+    value: '0',
+    data: requestData,
+  }
+  const params = { safeTxGas: 500000000 }
+  await sdk.txs.send({
+    txs: [executeWillTransaction],
+  })
+}
+
+export const deleteWill = async (sdk) => {
+  const mmInterface = new Interface(ABI)
+  const executeData = mmInterface.encodeFunctionData('deleteWill')
   const executeWillTransaction: BaseTransaction = {
     to: MM_ADDRESS,
     value: '0',
@@ -273,4 +305,18 @@ export const cancelExecution = async (sdk) => {
   await sdk.txs.send({
     txs: [cancelTransaction],
   })
+}
+
+export const getIsExecutor = (data: DisplayData, safe): boolean => {
+  for (let i = 0; i < data.executors.length; i += 1) {
+    for (let j = 0; j < safe.owners.length; j += 1) {
+      if (safe.safeAddress === data.executors[i] || safe.owners[j] === data.executors[i]) {
+        return true
+      }
+    }
+  }
+  return false
+}
+export const getExecTime = (data: DisplayData): number => {
+  return data.requestTime + data.cooldown
 }
