@@ -12,7 +12,6 @@ import { createWill } from './utils'
 // eslint-disable-next-line import/no-cycle
 import BeneficiaryFields from './components/BeneficiaryFields'
 import Navbar from './components/Navbar'
-import CreateForm from './components/CreateForm'
 import MyWill from './components/MyWill'
 import Execute from './components/Execute'
 
@@ -69,7 +68,7 @@ function SafeApp(): React.ReactElement {
     <BrowserRouter>
       <Navbar />
       <Routes>
-        <Route path="/" element={<CreateForm />} />
+        <Route path="/" element={<MyWill />} />
 
         <Route path="/execute" element={<Execute />} />
       </Routes>

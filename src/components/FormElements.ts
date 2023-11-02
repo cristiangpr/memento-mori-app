@@ -16,7 +16,7 @@ export const Will = styled.div`
 
 export const WillForm = styled.form`
   padding: 1rem;
-  width: 50%;
+  width: 65%;
 `
 export const Row = styled.div`
   width: 100%;

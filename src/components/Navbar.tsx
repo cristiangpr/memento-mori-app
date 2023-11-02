@@ -5,7 +5,7 @@ function Navbar(): React.ReactElement {
   return (
     <Nav>
       <NavMenu>
-        <NavLink to="/">Create Will</NavLink>
+        <NavLink to="/">My Will</NavLink>
         <NavLink to="/execute">Execute</NavLink>
 
         {/* Second Nav */}

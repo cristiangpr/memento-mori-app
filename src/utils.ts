@@ -8,7 +8,7 @@ import { parse } from 'path'
 import ABI from './abis/mementoMori.json'
 import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, DisplayData } from './types'
 
-const MM_ADDRESS = '0x464967E09BD5bfE4D5d2193a3cF53893Af1A9f03'
+const MM_ADDRESS = '0xdC6Ab811430DaC39bEE784D4a8BfbC0e27645b40'
 
 export const encodeTxData = (
   cooldown: number,
@@ -42,6 +42,7 @@ export const getUserInfo = async (address: string) => {
 }
 
 export const formatData = (data: FormTypes, ownerAddress: string) => {
+  console.log('sub', data)
   const newData = JSON.parse(JSON.stringify(data))
   const executors = []
   const nativeBeneficiaries = []
@@ -109,10 +110,10 @@ export const formatData = (data: FormTypes, ownerAddress: string) => {
   }
   const uniqueExecutors = [...new Set(executors)]
   uniqueExecutors.push(ownerAddress)
-  uniqueExecutors.filter((address) => {
+  const filteredExecutors = uniqueExecutors.filter((address) => {
     return address !== ZeroAddress
   })
-  newData.executors = uniqueExecutors
+  newData.executors = filteredExecutors
 
   return newData
 }
@@ -165,14 +166,15 @@ export const getWill = async (address, sdk: SafeAppsSDK): Promise<DisplayData> =
     data: getWillData,
   }
   const data = await sdk.eth.call([getWillTransaction])
-  const { isActive, cooldown, requestTime, native, tokens, nfts, erc1155s, executors } =
+  // eslint-disable-next-line prefer-const
+  let { isActive, cooldown, requestTime, native, tokens, nfts, erc1155s, executors } =
     dieSmartInterface.decodeFunctionResult('getWill', data)[0]
 
   const nativeBeneficiaries = []
   for (let i = 0; i < native[0].length; i += 1) {
     const nativeBeneficiary = { address: '', percentage: null }
     nativeBeneficiary.address = native[0][i]
-    nativeBeneficiary.percentage = native[1][i]
+    nativeBeneficiary.percentage = Number(native[1][i])
     nativeBeneficiaries.push(nativeBeneficiary)
   }
   const tokensArr = []
@@ -185,7 +187,7 @@ export const getWill = async (address, sdk: SafeAppsSDK): Promise<DisplayData> =
       const tokenBeneficiary = { address: '', percentage: null }
 
       tokenBeneficiary.address = tokens[i][1][j]
-      tokenBeneficiary.percentage = tokens[i][2][j]
+      tokenBeneficiary.percentage = Number(tokens[i][2][j])
       token.beneficiaries.push(tokenBeneficiary)
     }
     if (token.contractAddress !== ZeroAddress) tokensArr.push(token)
@@ -198,7 +200,7 @@ export const getWill = async (address, sdk: SafeAppsSDK): Promise<DisplayData> =
     nft.contractAddress = nfts[i][0]
     if (nft.contractAddress === ZeroAddress) break
     for (let j = 0; j < nfts[i][1].length; j += 1) {
-      nftBeneficiary.tokenId = nfts[i][1][j]
+      nftBeneficiary.tokenId = Number(nfts[i][1][j])
       nftBeneficiary.beneficiary = nfts[i][2][j]
       nft.beneficiaries.push(nftBeneficiary)
     }
@@ -211,16 +213,17 @@ export const getWill = async (address, sdk: SafeAppsSDK): Promise<DisplayData> =
 
     erc1155.contractAddress = erc1155s[i][0]
     if (erc1155.contractAddress === ZeroAddress) break
-    erc1155.tokenId = erc1155s[i][1]
+    erc1155.tokenId = Number(erc1155s[i][1])
     for (let j = 0; j < erc1155s[i][2].length; j += 1) {
       const erc1155Beneficiary = { address: '', percentage: null }
       erc1155Beneficiary.address = erc1155s[i][2][j]
-      erc1155Beneficiary.percentage = erc1155s[i][3][j]
+      erc1155Beneficiary.percentage = Number(erc1155s[i][3][j])
       erc1155.beneficiaries.push(erc1155Beneficiary)
     }
     if (erc1155.contractAddress !== ZeroAddress) erc1155sArr.push(erc1155)
   }
-
+  cooldown = Number(cooldown)
+  requestTime = Number(requestTime)
   return {
     isActive,
     cooldown,
@@ -235,13 +238,13 @@ export const getWill = async (address, sdk: SafeAppsSDK): Promise<DisplayData> =
 
 export const executeWill = async (sdk, ownerAddress) => {
   const mmInterface = new Interface(ABI)
-  const executeData = mmInterface.encodeFunctionData('execute', [ownerAddress, 500000000])
+  const executeData = mmInterface.encodeFunctionData('execute', [ownerAddress, 50000000000])
   const executeWillTransaction: BaseTransaction = {
     to: MM_ADDRESS,
     value: '0',
     data: executeData,
   }
-  const params = { safeTxGas: 500000000 }
+
   await sdk.txs.send({
     txs: [executeWillTransaction],
   })
@@ -318,5 +321,5 @@ export const getIsExecutor = (data: DisplayData, safe): boolean => {
   return false
 }
 export const getExecTime = (data: DisplayData): number => {
-  return data.requestTime + data.cooldown
+  return Number(data.requestTime) + Number(data.cooldown)
 }

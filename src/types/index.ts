@@ -1,4 +1,8 @@
-import { BigNumberish } from 'ethers'
+export enum CooldownPeriod {
+  OneWeek = 10080000,
+  TwoWeeks = 20160000,
+  OneMonth = 43200000,
+}
 
 export type Beneficiary = {
   address: string
