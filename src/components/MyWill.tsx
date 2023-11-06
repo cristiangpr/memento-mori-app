@@ -1,17 +1,41 @@
+/* eslint-disable no-nested-ternary */
 /* eslint-disable no-param-reassign */
 import React, { FormEvent, useEffect, useState } from 'react'
 import styled from 'styled-components'
-import { Title, Button, TextFieldInput, Tab, Menu, Select } from '@gnosis.pm/safe-react-components'
+import {
+  Title,
+  Button,
+  TextFieldInput,
+  Tab,
+  Menu,
+  Select,
+  GenericModal,
+  Loader,
+  Dot,
+  Icon,
+} from '@gnosis.pm/safe-react-components'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
-import { ZeroAddress } from 'ethers'
+import { BaseContract, Contract, JsonRpcProvider, ZeroAddress, getAddress, getDefaultProvider } from 'ethers'
 import { useSafeBalances } from '../hooks/useSafeBalances'
 import BalancesTable from './BalancesTable'
 import { DisplayData, Form, FormTypes } from '../types'
-import { createWill, deleteWill, executeWill, formatData, getExecTime, getWill, requestExecution } from '../utils'
+import {
+  cancelExecution,
+  createWill,
+  deleteWill,
+  executeWill,
+  formatData,
+  getExecTime,
+  getWill,
+  requestExecution,
+} from '../utils'
 import { Container, Row, LeftColumn, RightColumn, WillForm } from './FormElements'
 // eslint-disable-next-line import/no-cycle
 import BeneficiaryFields from './BeneficiaryFields'
+import { MM_ADDRESS } from '../constants'
+import ABI from '../abis/mementoMori.json'
+import { validateDuplicates, validateFieldsSum } from '../validation'
 
 function MyWill(): React.ReactElement {
   const { sdk, safe } = useSafeAppsSDK()
@@ -20,6 +44,12 @@ function MyWill(): React.ReactElement {
   const [isExecutable, setIsExecutable] = useState<boolean>(false)
   const [execTime, setExecTime] = useState<number>()
   const [hasWill, setHasWill] = useState<boolean>(false)
+  const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false)
+  const [isRequestOpen, setIsRequestOpen] = useState<boolean>(false)
+  const [isExecuteOpen, setIsExecuteOpen] = useState<boolean>(false)
+  const [isCancelOpen, setIsCancelOpen] = useState<boolean>(false)
+  const [success, setSuccess] = useState<boolean>(false)
 
   const {
     register,
@@ -107,181 +137,232 @@ function MyWill(): React.ReactElement {
     name: 'erc1155s',
   })
 
-  const validateFieldsSum = async (data) => {
-    let nativeSum = 0
-    for (let i = 0; i < data.nativeToken[0].beneficiaries.length; i += 1) {
-      nativeSum += Number(data.nativeToken[0].beneficiaries[i].percentage)
-    }
-    if (nativeSum !== 100) {
-      setError(`nativeToken.${0}.beneficiaries`, {
-        type: 'manual',
-        message: 'Field values must add up to 100.',
-      })
-      return false
-    }
-
-    for (let i = 0; i < data.tokens.length; i += 1) {
-      let tokenSum = 0
-      for (let j = 0; j < data.tokens[i].beneficiaries.length; j += 1) {
-        tokenSum += Number(data.tokens[i].beneficiaries[j].percentage)
-      }
-      if (tokenSum !== 100) {
-        setError(`tokens.${i}.beneficiaries`, {
-          type: 'manual',
-          message: 'Field values must add up to 100.',
-        })
-
-        return false
-      }
-    }
-    for (let i = 0; i < data.erc1155s.length; i += 1) {
-      let erc1155Sum = 0
-      for (let j = 0; j < data.erc1155s[i].beneficiaries.length; j += 1) {
-        erc1155Sum += Number(data.erc1155s[i].beneficiaries[j].percentage)
-      }
-      if (erc1155Sum !== 100) {
-        setError(`erc1155s.${i}.beneficiaries`, {
-          type: 'manual',
-          message: 'Field values must add up to 100.',
-        })
-        return false
-      }
-    }
-
-    return true
-  }
-
-  const validateDuplicates = async (data) => {
-    for (let i = 0; i < data.nativeToken[0].beneficiaries.length; i += 1) {
-      for (let j = i + 1; j < data.nativeToken[0].beneficiaries.length; j += 1) {
-        if (data.nativeToken[0].beneficiaries[i].address === data.nativeToken[0].beneficiaries[j].address) {
-          setError(`nativeToken.${i}`, {
-            type: 'manual',
-            message: 'Beneficiary addresses must be unique.',
-          })
-          return false
-        }
-      }
-    }
-    if (data.tokens.length > 0) {
-      for (let i = 0; i < data.tokens.length; i += 1) {
-        for (let j = i + 1; j < data.tokens.length; j += 1) {
-          if (data.tokens[i].contractAddress === data.tokens[j].contractAddress) {
-            setError(`tokens.${j}.contractAddress`, {
-              type: 'manual',
-              message: 'Token addresses must be unique.',
-            })
-
-            return false
-          }
-        }
-      }
-
-      for (let i = 0; i < data.tokens.length; i += 1) {
-        for (let j = 0; j < data.tokens[i].beneficiaries.length; j += 1) {
-          for (let k = j + 1; k < data.tokens[i].beneficiaries.length; k += 1) {
-            if (data.tokens[i].beneficiaries[j].address === data.tokens[i].beneficiaries[k].address) {
-              setError(`tokens.${i}`, {
-                type: 'manual',
-                message: 'Beneficiary addresses must be unique.',
-              })
-
-              return false
-            }
-          }
-        }
-      }
-    }
-    if (data.nfts.length > 0) {
-      for (let i = 0; i < data.nfts.length; i += 1) {
-        for (let j = i + 1; j < data.nfts.length; j += 1) {
-          if (data.nfts[i].contractAddress === data.nfts[j].contractAddress) {
-            setError(`nfts.${j}.contractAddress`, {
-              type: 'manual',
-              message: 'Token addresses must be unique.',
-            })
-
-            return false
-          }
-        }
-      }
-      for (let i = 0; i < data.nfts.length; i += 1) {
-        for (let j = 0; j < data.nfts[i].beneficiaries.length; j += 1) {
-          for (let k = j + 1; k < data.nfts[i].beneficiaries.length; k += 1) {
-            if (data.nfts[i].beneficiaries[j].beneficiary === data.tokens[i].beneficiaries[k].beneficiary) {
-              setError(`nfts.${i}.beneficiaries.${k}`, {
-                type: 'manual',
-                message: 'Beneficiary addresses must be unique.',
-              })
-
-              return false
-            }
-          }
-        }
-      }
-    }
-    if (data.erc1155s.length > 0) {
-      for (let i = 0; i < data.erc1155s.length; i += 1) {
-        for (let j = i + 1; j < data.erc1155s.length; j += 1) {
-          if (data.erc1155s[i].contractAddress === data.erc1155s[j].contractAddress) {
-            setError(`erc1155s.${j}.contractAddress`, {
-              type: 'manual',
-              message: 'Token addresses must be unique.',
-            })
-
-            return false
-          }
-        }
-      }
-
-      for (let i = 0; i < data.erc1155s.length; i += 1) {
-        for (let j = 0; j < data.erc1155s[i].beneficiaries.length; j += 1) {
-          for (let k = j + 1; k < data.erc1155s[i].beneficiaries.length; k += 1) {
-            if (data.erc1155s[i].beneficiaries[j].address === data.erc1155s[i].beneficiaries[k].address) {
-              setError(`erc1155s.${i}.beneficiaries.${k}`, {
-                type: 'manual',
-                message: 'Beneficiary addresses must be unique.',
-              })
-
-              return false
-            }
-          }
-        }
-      }
-    }
-
-    return true
-  }
-
   const onSubmit = async (data): Promise<void> => {
-    const sumValidated = await validateFieldsSum(data)
-    const validated = await validateDuplicates(data)
+    console.log('url', process.env.REACT_APP_RPC_URL)
+    const sumValidated = await validateFieldsSum(data, setError)
+    const validated = await validateDuplicates(data, setError)
     if (validated && sumValidated) {
       const newData = formatData(data, safe.safeAddress)
-
+      setIsCreateOpen(true)
       await createWill(newData, sdk, safe)
+      const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+      const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+      contract.on('WillCreated', (ownerAddress) => {
+        console.log('event', ownerAddress)
+        if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
+          setSuccess(true)
+          setIsCreateOpen(true)
+          reset({
+            cooldown: Number(displayData.cooldown),
+            nativeToken: [displayData.nativeToken],
+            tokens: displayData.tokens,
+            nfts: displayData.nfts,
+            erc1155s: displayData.erc1155s,
+          })
+        }
+      })
     }
+  }
+  const handleDelete = async () => {
+    setSuccess(false)
+    setIsDeleteOpen(true)
+    await deleteWill(sdk)
+    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+    contract.on('WillDeleted', (ownerAddress) => {
+      if (ownerAddress === safe.safeAddress) {
+        setSuccess(true)
+        setIsDeleteOpen(true)
+        reset({
+          cooldown: Number(displayData.cooldown),
+          nativeToken: [displayData.nativeToken],
+          tokens: displayData.tokens,
+          nfts: displayData.nfts,
+          erc1155s: displayData.erc1155s,
+        })
+      }
+    })
+  }
+  const handleRequest = async () => {
+    setSuccess(false)
+    setIsRequestOpen(true)
+    await requestExecution(safe.safeAddress, sdk)
+    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+    contract.on('ExecutionRequested', (ownerAddress) => {
+      if (ownerAddress === safe.safeAddress) {
+        setSuccess(true)
+        setIsRequestOpen(true)
+      }
+    })
+  }
+  const handleCancel = async () => {
+    setSuccess(false)
+    setIsCancelOpen(true)
+    await cancelExecution(sdk)
+    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+    contract.on('ExecutionCancelled', (ownerAddress) => {
+      if (ownerAddress === safe.safeAddress) {
+        setSuccess(true)
+        setIsCancelOpen(true)
+      }
+    })
+  }
+  const handleExecute = async () => {
+    setSuccess(false)
+    setIsExecuteOpen(true)
+    await executeWill(sdk, safe.safeAddress)
+    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+    contract.on('WillExecuted', (ownerAddress) => {
+      if (ownerAddress === safe.safeAddress) {
+        setSuccess(true)
+        setIsExecuteOpen(true)
+      }
+    })
   }
   const handleScroll = (e: FormEvent<HTMLInputElement>) => {
     e.currentTarget.blur()
   }
+  const handleCreateClose = () => {
+    setIsCreateOpen(false)
+    setSuccess(false)
+  }
+  const handleDeleteClose = () => {
+    setIsDeleteOpen(false)
+    setSuccess(false)
+  }
+  const handleRequestClose = () => {
+    setIsRequestOpen(false)
+    setSuccess(false)
+  }
+  const handleCancelClose = () => {
+    setIsCancelOpen(false)
+    setSuccess(false)
+  }
+  const handleExecuteClose = () => {
+    setIsExecuteOpen(false)
+    setSuccess(false)
+  }
   return (
     <Container>
+      {isCreateOpen && (
+        <div style={{ justifyContent: 'right' }}>
+          <GenericModal
+            title={
+              hasWill && !success
+                ? 'Updating Will'
+                : !hasWill && !success
+                ? 'Creating Will'
+                : hasWill && success
+                ? 'Will Updated'
+                : 'Will Created'
+            }
+            body={
+              !success ? (
+                <div style={{ paddingLeft: '11.875rem' }}>
+                  <Loader size="lg" />
+                </div>
+              ) : (
+                <div style={{ paddingLeft: '12.875rem' }}>
+                  <Dot color="primary">
+                    <Icon color="white" type="check" size="sm" />
+                  </Dot>
+                </div>
+              )
+            }
+            onClose={() => handleCreateClose()}
+          />
+        </div>
+      )}
+      {isDeleteOpen && (
+        <GenericModal
+          title={!success ? 'Deleting Will' : 'Will Deleted'}
+          body={
+            !success ? (
+              <div style={{ paddingLeft: '11.875rem' }}>
+                <Loader size="lg" />
+              </div>
+            ) : (
+              <div style={{ paddingLeft: '12.875rem' }}>
+                <Dot color="primary">
+                  <Icon color="white" type="check" size="sm" />
+                </Dot>
+              </div>
+            )
+          }
+          onClose={() => handleDeleteClose()}
+        />
+      )}
+      {isRequestOpen && (
+        <GenericModal
+          title={!success ? 'Requesting Execution' : 'Execution Requested'}
+          body={
+            !success ? (
+              <div style={{ paddingLeft: '11.875rem' }}>
+                <Loader size="lg" />
+              </div>
+            ) : (
+              <div style={{ paddingLeft: '12.875rem' }}>
+                <Dot color="primary">
+                  <Icon color="white" type="check" size="sm" />
+                </Dot>
+                <div>Will executable after {new Date(execTime * 1000).toLocaleString()}</div>
+              </div>
+            )
+          }
+          onClose={() => handleRequestClose()}
+        />
+      )}
+      {isCancelOpen && (
+        <GenericModal
+          title={!success ? 'Cancelling Execution' : 'Execution Cancelled'}
+          body={
+            !success ? (
+              <div style={{ paddingLeft: '11.875rem' }}>
+                <Loader size="lg" />
+              </div>
+            ) : (
+              <div style={{ paddingLeft: '12.875rem' }}>
+                <Dot color="primary">
+                  <Icon color="white" type="check" size="sm" />
+                </Dot>
+              </div>
+            )
+          }
+          onClose={() => handleCancelClose()}
+        />
+      )}
+      {isExecuteOpen && (
+        <GenericModal
+          title={!success ? 'Executing Will' : 'Will Executed'}
+          body={
+            !success ? (
+              <div style={{ paddingLeft: '11.875rem' }}>
+                <Loader size="lg" />
+              </div>
+            ) : (
+              <div style={{ paddingLeft: '12.875rem' }}>
+                <Dot color="primary">
+                  <Icon color="white" type="check" size="sm" />
+                </Dot>
+              </div>
+            )
+          }
+          onClose={() => handleExecuteClose()}
+        />
+      )}
       <Title size="lg">Memento Mori</Title>
       <Row style={{ width: '65%' }}>
         Memento Mori is an app that lets you create a will for your Safe. Beneficiaries of a will may request execution.
         If execution is not canceled by the Safe owner during the cooldown period the will may be executed
       </Row>
-      <Title size="md">Your Tokens</Title>
-      <Row style={{ width: '65%' }}>
-        Below is a list of the tokens we detect in your Safe. They may be added to your will by clicking the "Add Token"
-        button. If you don't see your tokens on the list you may add them manually using the form below.
-      </Row>
-      <BalancesTable balances={balances} addToken={appendToken} />
+
       <Title size="md">{hasWill ? 'My Will' : 'Create Will'}</Title>
       <Row style={{ width: '65%' }}>
         {hasWill
-          ? 'Below is your current will. You may add or delete tokens using the form and click the "Update Will" button to save changes. You may also delete the will or request execution by owner by clcking the appropriate buttons.'
+          ? 'Below is your current will. You may add or delete tokens by using the form and clicking the "Update Will" button to save changes. You may also delete the will or request execution by owner by clcking the appropriate buttons.'
           : 'Follow the steps below to create a will. Make sure at least one beneficiary is a Safe so they may request execution using this app. Non Safe addresses may request execution by interacting directly with the contract.'}
       </Row>
 
@@ -304,11 +385,15 @@ function MyWill(): React.ReactElement {
         })}
 
         <Title size="sm">Step 2.- ERC20 Tokens</Title>
+
         <Row>
           Define beneficiaries and percentages for your ERC20 tokens. Each beneficiary will recieve the percentage of
-          your tokens entered next to their address. If you have no ERC20 tokens you wish to inherit you may skip this
-          step
+          your tokens entered next to their address. Below is a list of ERC20 tokens we detect in your Safe. They may be
+          added to your will by clicking the "Add Token" button. If you don't see your tokens on the list you may add
+          them manually using the form below. If you have no ERC20 tokens you wish to inherit you may skip this step
         </Row>
+        <Title size="sm">Your Tokens</Title>
+        <BalancesTable balances={balances} addToken={appendToken} />
         {tokenFields.map((element, index) => {
           return (
             <div key={element.id}>
@@ -415,8 +500,8 @@ function MyWill(): React.ReactElement {
         <Title size="sm">Step 4.- ERC1155 Tokens</Title>
         <Row>
           Define beneficiaries for your ERC1155 tokens. ERC1155 tokens may be fungible or non fungible. If your ERC1155
-          is non fungible make sure you define only one beneficiary and their percentage is set to 100. If you have no
-          ERC1155 tokens you wish to inherit you may skip this step.
+          is non fungible make sure you define only one beneficiary and that their percentage is set to 100. If you have
+          no ERC1155 tokens you wish to inherit you may skip this step.
         </Row>
         {erc1155Fields.map((element, index) => {
           return (
@@ -508,7 +593,7 @@ function MyWill(): React.ReactElement {
                   onBlur={onBlur} // notify when input is touched
                   onChange={onChange} // send value to hook form
                   ref={ref}
-                  label="cooldown period in seconds"
+                  label={hasWill ? '' : 'cooldown period in seconds'}
                   name="cooldown"
                   error={error?.type}
                   showErrorsInTheLabel
@@ -527,12 +612,12 @@ function MyWill(): React.ReactElement {
         {hasWill && (
           <>
             <Row style={{ justifyContent: 'center' }}>
-              <Button size="md" onClick={() => deleteWill(sdk)}>
+              <Button size="md" onClick={() => handleDelete()}>
                 Delete Will
               </Button>
             </Row>
             <Row style={{ justifyContent: 'center' }}>
-              <Button size="md" onClick={() => requestExecution(safe.safeAddress, sdk)}>
+              <Button size="md" onClick={() => handleRequest()}>
                 Request Execution
               </Button>
             </Row>
@@ -540,16 +625,24 @@ function MyWill(): React.ReactElement {
         )}
 
         {execTime && (
+          <>
+            <Row style={{ justifyContent: 'center' }}>
+              <div>Will executable after {new Date(execTime * 1000).toLocaleString()}</div>
+            </Row>
+            <Row style={{ justifyContent: 'center' }}>
+              <Button size="md" onClick={() => handleCancel()}>
+                Cancel Execution
+              </Button>
+            </Row>
+          </>
+        )}
+        {isExecutable && (
           <Row style={{ justifyContent: 'center' }}>
-            <div>Will executable after {new Date(execTime * 1000).toLocaleString()}</div>
+            <Button size="md" onClick={() => handleExecute()}>
+              Execute Will
+            </Button>
           </Row>
         )}
-
-        <Row style={{ justifyContent: 'center' }}>
-          <Button size="md" onClick={() => executeWill(sdk, safe.safeAddress)}>
-            Execute Will
-          </Button>
-        </Row>
       </WillForm>
     </Container>
   )

@@ -1,10 +1,13 @@
 /* eslint-disable no-nested-ternary */
 import React, { useEffect, useState } from 'react'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
-import { Title, Button, TextFieldInput } from '@gnosis.pm/safe-react-components'
+import { Title, Button, TextFieldInput, GenericModal, Loader, Dot, Icon } from '@gnosis.pm/safe-react-components'
+import { BaseContract, JsonRpcProvider } from 'ethers'
 import { executeWill, getExecTime, getWill, getIsExecutor, requestExecution } from '../utils'
 import { DisplayData } from '../types'
 import { Container, LeftColumn, RightColumn, Row, Will, WillForm } from './FormElements'
+import { MM_ADDRESS } from '../constants'
+import ABI from '../abis/mementoMori.json'
 
 function Execute(): React.ReactElement {
   const [displayData, setDisplayData] = useState<DisplayData>()
@@ -13,6 +16,9 @@ function Execute(): React.ReactElement {
   const [isExecutable, setIsExecutable] = useState<boolean>(false)
   const [hasSearched, setHasSearched] = useState<boolean>(false)
   const [execTime, setExecTime] = useState<number>()
+  const [isRequestOpen, setIsRequestOpen] = useState<boolean>(false)
+  const [isExecuteOpen, setIsExecuteOpen] = useState<boolean>(false)
+  const [success, setSuccess] = useState<boolean>(false)
 
   const { safe, sdk } = useSafeAppsSDK()
 
@@ -20,6 +26,40 @@ function Execute(): React.ReactElement {
     const data = await getWill(ownerAddress, sdk)
     setDisplayData(data)
     setHasSearched(true)
+  }
+  const handleRequest = async () => {
+    setSuccess(false)
+    setIsRequestOpen(true)
+    await requestExecution(ownerAddress, sdk)
+    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+    contract.on('ExecutionRequested', (address) => {
+      if (ownerAddress === address) {
+        setSuccess(true)
+        setIsRequestOpen(true)
+      }
+    })
+  }
+  const handleExecute = async () => {
+    setSuccess(false)
+    setIsExecuteOpen(true)
+    await executeWill(sdk, ownerAddress)
+    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+    contract.on('WillExecuted', (address) => {
+      if (ownerAddress === address) {
+        setSuccess(true)
+        setIsExecuteOpen(true)
+      }
+    })
+  }
+  const handleRequestClose = () => {
+    setIsRequestOpen(false)
+    setSuccess(false)
+  }
+  const handleExecuteClose = () => {
+    setIsExecuteOpen(false)
+    setSuccess(false)
   }
 
   useEffect(() => {
@@ -36,6 +76,45 @@ function Execute(): React.ReactElement {
 
   return (
     <Container>
+      {isRequestOpen && (
+        <GenericModal
+          title={!success ? 'Requesting Execution' : 'Execution Requested'}
+          body={
+            !success ? (
+              <div style={{ paddingLeft: '11.875rem' }}>
+                <Loader size="lg" />
+              </div>
+            ) : (
+              <div style={{ paddingLeft: '12.875rem' }}>
+                <Dot color="primary">
+                  <Icon color="white" type="check" size="sm" />
+                </Dot>
+                <div>Will executable after {new Date(execTime * 1000).toLocaleString()}</div>
+              </div>
+            )
+          }
+          onClose={() => handleRequestClose()}
+        />
+      )}
+      {isExecuteOpen && (
+        <GenericModal
+          title={!success ? 'Executing Will' : 'Will Executed'}
+          body={
+            !success ? (
+              <div style={{ paddingLeft: '11.875rem' }}>
+                <Loader size="lg" />
+              </div>
+            ) : (
+              <div style={{ paddingLeft: '12.875rem' }}>
+                <Dot color="primary">
+                  <Icon color="white" type="check" size="sm" />
+                </Dot>
+              </div>
+            )
+          }
+          onClose={() => handleExecuteClose()}
+        />
+      )}
       <Title size="lg">Execute</Title>
       <Title size="sm">Enter owner address to find will and request execution</Title>
       <Row style={{ width: '50%', padding: '1rem' }}>
@@ -169,20 +248,20 @@ function Execute(): React.ReactElement {
           </Will>
           {isExecutor && (
             <div style={{ padding: '20px' }}>
-              <Button size="md" onClick={() => requestExecution(ownerAddress, sdk)}>
+              <Button size="md" onClick={() => handleRequest()}>
                 Request Execution
               </Button>
             </div>
           )}
           {execTime && (
             <div style={{ padding: '20px' }}>
-              <div>Will executable after {new Date(execTime * 1000).toLocaleDateString()}</div>
+              <div>Will executable after {new Date(execTime * 1000).toLocaleString()}</div>
               {console.log('exec', execTime)}
             </div>
           )}
           {isExecutable && (
             <div style={{ padding: '20px' }}>
-              <Button size="md" onClick={() => executeWill(sdk, ownerAddress)}>
+              <Button size="md" onClick={() => handleExecute()}>
                 Execute Will
               </Button>
             </div>

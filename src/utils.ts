@@ -7,8 +7,7 @@ import SafeAppsSDK from '@safe-global/safe-apps-sdk/dist/src/sdk'
 import { parse } from 'path'
 import ABI from './abis/mementoMori.json'
 import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, DisplayData } from './types'
-
-const MM_ADDRESS = '0xdC6Ab811430DaC39bEE784D4a8BfbC0e27645b40'
+import { MM_ADDRESS } from './constants'
 
 export const encodeTxData = (
   cooldown: number,
@@ -118,7 +117,7 @@ export const formatData = (data: FormTypes, ownerAddress: string) => {
   return newData
 }
 
-export const createWill = async (data: FormTypes, sdk, safe) => {
+export const createWill = async (data: FormTypes, sdk, safe): Promise<boolean> => {
   const txData = encodeTxData(data.cooldown, data.nativeToken[0], data.tokens, data.nfts, data.erc1155s, data.executors)
   const createWillTransaction: BaseTransaction = {
     to: MM_ADDRESS,
@@ -155,6 +154,8 @@ export const createWill = async (data: FormTypes, sdk, safe) => {
       params,
     })
   }
+
+  return true
 }
 
 export const getWill = async (address, sdk: SafeAppsSDK): Promise<DisplayData> => {
