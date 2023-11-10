@@ -54,7 +54,7 @@ export const formatData = (data: FormTypes, ownerAddress: string) => {
   newData.nativeToken[0].beneficiaries = nativeBeneficiaries
   newData.nativeToken[0].percentages = nativePercentages
   if (!newData.tokens[0]) {
-    newData.tokens[0] = { contractAddress: ZeroAddress, beneficiaries: [{ address: ZeroAddress, percentage: 0 }] }
+    newData.tokens = []
   }
   for (let i = 0; i < newData.tokens.length; i += 1) {
     const tokenBeneficiaries = []
@@ -70,10 +70,7 @@ export const formatData = (data: FormTypes, ownerAddress: string) => {
   }
 
   if (!newData.nfts[0]) {
-    newData.nfts[0] = {
-      contractAddress: ZeroAddress,
-      beneficiaries: [{ tokenId: 0, beneficiary: ZeroAddress }],
-    }
+    newData.nfts = []
   }
   for (let i = 0; i < newData.nfts.length; i += 1) {
     const nftBeneficiaries = []
@@ -89,11 +86,7 @@ export const formatData = (data: FormTypes, ownerAddress: string) => {
     newData.nfts[i].tokenIds = nftIds
   }
   if (!newData.erc1155s[0]) {
-    newData.erc1155s[0] = {
-      contractAddress: ZeroAddress,
-      tokenId: 0,
-      beneficiaries: [{ address: ZeroAddress, percentage: 0 }],
-    }
+    newData.erc1155s = []
   }
   for (let i = 0; i < newData.erc1155s.length; i += 1) {
     const erc1155Beneficiaries = []
@@ -167,10 +160,11 @@ export const getWill = async (address, sdk: SafeAppsSDK): Promise<DisplayData> =
     data: getWillData,
   }
   const data = await sdk.eth.call([getWillTransaction])
+
   // eslint-disable-next-line prefer-const
   let { isActive, cooldown, requestTime, native, tokens, nfts, erc1155s, executors } =
     dieSmartInterface.decodeFunctionResult('getWill', data)[0]
-
+  console.log('data', isActive, cooldown, requestTime, native, tokens, nfts, erc1155s, executors)
   const nativeBeneficiaries = []
   for (let i = 0; i < native[0].length; i += 1) {
     const nativeBeneficiary = { address: '', percentage: null }
@@ -179,49 +173,51 @@ export const getWill = async (address, sdk: SafeAppsSDK): Promise<DisplayData> =
     nativeBeneficiaries.push(nativeBeneficiary)
   }
   const tokensArr = []
-  for (let i = 0; i < tokens.length; i += 1) {
-    const token = { contractAddress: '', beneficiaries: [] }
+  if (tokens.length > 0) {
+    for (let i = 0; i < tokens.length; i += 1) {
+      const token = { contractAddress: '', beneficiaries: [] }
 
-    token.contractAddress = tokens[i][0]
-    if (token.contractAddress === ZeroAddress) break
-    for (let j = 0; j < tokens[i][1].length; j += 1) {
-      const tokenBeneficiary = { address: '', percentage: null }
+      token.contractAddress = tokens[i][0]
+      for (let j = 0; j < tokens[i][1].length; j += 1) {
+        const tokenBeneficiary = { address: '', percentage: null }
 
-      tokenBeneficiary.address = tokens[i][1][j]
-      tokenBeneficiary.percentage = Number(tokens[i][2][j])
-      token.beneficiaries.push(tokenBeneficiary)
+        tokenBeneficiary.address = tokens[i][1][j]
+        tokenBeneficiary.percentage = Number(tokens[i][2][j])
+        token.beneficiaries.push(tokenBeneficiary)
+      }
+      tokensArr.push(token)
     }
-    if (token.contractAddress !== ZeroAddress) tokensArr.push(token)
   }
-
   const nftsArr = []
-  for (let i = 0; i < nfts.length; i += 1) {
-    const nft = { contractAddress: '', beneficiaries: [] }
-    const nftBeneficiary = { tokenId: null, beneficiary: '' }
-    nft.contractAddress = nfts[i][0]
-    if (nft.contractAddress === ZeroAddress) break
-    for (let j = 0; j < nfts[i][1].length; j += 1) {
-      nftBeneficiary.tokenId = Number(nfts[i][1][j])
-      nftBeneficiary.beneficiary = nfts[i][2][j]
-      nft.beneficiaries.push(nftBeneficiary)
+  if (nfts.length > 0) {
+    for (let i = 0; i < nfts.length; i += 1) {
+      const nft = { contractAddress: '', beneficiaries: [] }
+      const nftBeneficiary = { tokenId: null, beneficiary: '' }
+      nft.contractAddress = nfts[i][0]
+      for (let j = 0; j < nfts[i][1].length; j += 1) {
+        nftBeneficiary.tokenId = Number(nfts[i][1][j])
+        nftBeneficiary.beneficiary = nfts[i][2][j]
+        nft.beneficiaries.push(nftBeneficiary)
+      }
+      nftsArr.push(nft)
     }
-    if (nft.contractAddress !== ZeroAddress) nftsArr.push(nft)
   }
-
   const erc1155sArr = []
-  for (let i = 0; i < erc1155s.length; i += 1) {
-    const erc1155 = { contractAddress: '', tokenId: null, beneficiaries: [] }
+  if (erc1155s.length > 0) {
+    for (let i = 0; i < erc1155s.length; i += 1) {
+      const erc1155 = { contractAddress: '', tokenId: null, beneficiaries: [] }
 
-    erc1155.contractAddress = erc1155s[i][0]
-    if (erc1155.contractAddress === ZeroAddress) break
-    erc1155.tokenId = Number(erc1155s[i][1])
-    for (let j = 0; j < erc1155s[i][2].length; j += 1) {
-      const erc1155Beneficiary = { address: '', percentage: null }
-      erc1155Beneficiary.address = erc1155s[i][2][j]
-      erc1155Beneficiary.percentage = Number(erc1155s[i][3][j])
-      erc1155.beneficiaries.push(erc1155Beneficiary)
+      erc1155.contractAddress = erc1155s[i][0]
+      if (erc1155.contractAddress === ZeroAddress) break
+      erc1155.tokenId = Number(erc1155s[i][1])
+      for (let j = 0; j < erc1155s[i][2].length; j += 1) {
+        const erc1155Beneficiary = { address: '', percentage: null }
+        erc1155Beneficiary.address = erc1155s[i][2][j]
+        erc1155Beneficiary.percentage = Number(erc1155s[i][3][j])
+        erc1155.beneficiaries.push(erc1155Beneficiary)
+      }
+      erc1155sArr.push(erc1155)
     }
-    if (erc1155.contractAddress !== ZeroAddress) erc1155sArr.push(erc1155)
   }
   cooldown = Number(cooldown)
   requestTime = Number(requestTime)
