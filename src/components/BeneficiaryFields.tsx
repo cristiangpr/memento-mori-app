@@ -15,15 +15,6 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
     name: `${tokenType}.${nestIndex}.beneficiaries`,
   })
 
-  const [err, setErr] = useState()
-
-  const handleError = (errs, type) => {
-    const filtered = errs.type.filter((element) => {
-      return element !== null
-    })
-    return filtered
-  }
-
   return (
     <>
       {beneficiaryFields.map((element, index) => {

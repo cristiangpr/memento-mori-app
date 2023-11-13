@@ -22,17 +22,17 @@ function Execute(): React.ReactElement {
 
   const { safe, sdk } = useSafeAppsSDK()
 
-  const loadData = async () => {
-    const data = await getWill(ownerAddress, sdk)
+  const loadData = async (): Promise<void> => {
+    const data: DisplayData = await getWill(ownerAddress, sdk)
     setDisplayData(data)
     setHasSearched(true)
   }
-  const handleRequest = async () => {
+  const handleRequest = async (): Promise<void> => {
     setSuccess(false)
     setIsRequestOpen(true)
     await requestExecution(ownerAddress, sdk)
-    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
-    const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+    const provider: JsonRpcProvider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract: BaseContract = new BaseContract(MM_ADDRESS, ABI, provider)
     contract.on('ExecutionRequested', (address) => {
       if (ownerAddress === address) {
         setSuccess(true)
@@ -53,11 +53,11 @@ function Execute(): React.ReactElement {
       }
     })
   }
-  const handleRequestClose = () => {
+  const handleRequestClose = (): void => {
     setIsRequestOpen(false)
     setSuccess(false)
   }
-  const handleExecuteClose = () => {
+  const handleExecuteClose = (): void => {
     setIsExecuteOpen(false)
     setSuccess(false)
   }

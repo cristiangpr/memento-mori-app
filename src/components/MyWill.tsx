@@ -163,7 +163,7 @@ function MyWill(): React.ReactElement {
       })
     }
   }
-  const handleDelete = async () => {
+  const handleDelete = async (): Promise<void> => {
     setSuccess(false)
     setIsDeleteOpen(true)
     await deleteWill(sdk)
@@ -183,7 +183,7 @@ function MyWill(): React.ReactElement {
       }
     })
   }
-  const handleRequest = async () => {
+  const handleRequest = async (): Promise<void> => {
     setSuccess(false)
     setIsRequestOpen(true)
     await requestExecution(safe.safeAddress, sdk)
@@ -196,7 +196,7 @@ function MyWill(): React.ReactElement {
       }
     })
   }
-  const handleCancel = async () => {
+  const handleCancel = async (): Promise<void> => {
     setSuccess(false)
     setIsCancelOpen(true)
     await cancelExecution(sdk)
@@ -209,7 +209,7 @@ function MyWill(): React.ReactElement {
       }
     })
   }
-  const handleExecute = async () => {
+  const handleExecute = async (): Promise<void> => {
     setSuccess(false)
     setIsExecuteOpen(true)
     await executeWill(sdk, safe.safeAddress)

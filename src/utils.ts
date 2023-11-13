@@ -2,9 +2,10 @@
 /* eslint-disable no-param-reassign */
 import { Contract, Interface, ZeroAddress, ethers } from 'ethers'
 
-import { BaseTransaction, SendTransactionsParams } from '@safe-global/safe-apps-sdk'
+import { BaseTransaction, SendTransactionsParams, SendTransactionsResponse } from '@safe-global/safe-apps-sdk'
 import SafeAppsSDK from '@safe-global/safe-apps-sdk/dist/src/sdk'
 import { parse } from 'path'
+import Safe from '@safe-global/protocol-kit'
 import ABI from './abis/mementoMori.json'
 import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, DisplayData } from './types'
 import { MM_ADDRESS } from './constants'
@@ -21,7 +22,7 @@ export const encodeTxData = (
   return dieSmartInterface.encodeFunctionData('createWill', [cooldown, native, tokens, nfts, erc1155s, executors])
 }
 
-export const saveWill = async (postData: UserInfo) => {
+export const saveWill = async (postData: UserInfo): Promise<void> => {
   const response = await fetch('https://iwill-strapi.herokuapp.com/api/wills', {
     method: 'POST',
     headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
@@ -29,7 +30,7 @@ export const saveWill = async (postData: UserInfo) => {
   })
 }
 
-export const getUserInfo = async (address: string) => {
+export const getUserInfo = async (address: string): Promise<UserInfo> => {
   const response = await fetch(
     `https://iwill-strapi.herokuapp.com/api/wills?filters[address][$eq]=${address}&paginationl[start]=0&pagination[limit]=1`,
     {
@@ -40,7 +41,7 @@ export const getUserInfo = async (address: string) => {
   return response.json()
 }
 
-export const formatData = (data: FormTypes, ownerAddress: string) => {
+export const formatData = (data: FormTypes, ownerAddress: string): FormTypes => {
   console.log('sub', data)
   const newData = JSON.parse(JSON.stringify(data))
   const executors = []
@@ -110,7 +111,11 @@ export const formatData = (data: FormTypes, ownerAddress: string) => {
   return newData
 }
 
-export const createWill = async (data: FormTypes, sdk, safe): Promise<boolean> => {
+export const createWill = async (
+  data: FormTypes,
+  sdk: SafeAppsSDK,
+  safe: { safeAddress: any; chainId?: number; threshold?: number; owners?: string[]; isReadOnly?: boolean },
+): Promise<boolean> => {
   const txData = encodeTxData(data.cooldown, data.nativeToken[0], data.tokens, data.nfts, data.erc1155s, data.executors)
   const createWillTransaction: BaseTransaction = {
     to: MM_ADDRESS,
@@ -118,13 +123,13 @@ export const createWill = async (data: FormTypes, sdk, safe): Promise<boolean> =
     data: txData,
   }
   const params = { safeTxGas: 500000000 }
-  const IisModuleEnabled = new Interface(['function isModuleEnabled(address module)'])
-  const isModuleEnabledData = IisModuleEnabled.encodeFunctionData('isModuleEnabled', [MM_ADDRESS])
+  const IisModuleEnabled: Interface = new Interface(['function isModuleEnabled(address module)'])
+  const isModuleEnabledData: string = IisModuleEnabled.encodeFunctionData('isModuleEnabled', [MM_ADDRESS])
   const isModuleEnabledParams = {
     to: safe.safeAddress,
     data: isModuleEnabledData,
   }
-  const isEnabledData = await sdk.eth.call([isModuleEnabledParams])
+  const isEnabledData: string = await sdk.eth.call([isModuleEnabledParams])
   const isEnabled = isEnabledData !== '0x0000000000000000000000000000000000000000000000000000000000000000'
   if (isEnabled) {
     const safeCreateWillTransaction = await sdk.txs.send({
@@ -132,9 +137,9 @@ export const createWill = async (data: FormTypes, sdk, safe): Promise<boolean> =
       params,
     })
   } else {
-    const IenableModule = new Interface(['function enableModule(address module)'])
+    const IenableModule: Interface = new Interface(['function enableModule(address module)'])
 
-    const enableModuleData = IenableModule.encodeFunctionData('enableModule', [MM_ADDRESS])
+    const enableModuleData: string = IenableModule.encodeFunctionData('enableModule', [MM_ADDRESS])
 
     const safeEnableModuleTransactionData: BaseTransaction = {
       to: safe.safeAddress,
@@ -142,7 +147,7 @@ export const createWill = async (data: FormTypes, sdk, safe): Promise<boolean> =
       data: enableModuleData,
     }
 
-    const safeCreateWillTransaction = await sdk.txs.send({
+    const safeCreateWillTransaction: SendTransactionsResponse = await sdk.txs.send({
       txs: [createWillTransaction, safeEnableModuleTransactionData],
       params,
     })
@@ -151,9 +156,9 @@ export const createWill = async (data: FormTypes, sdk, safe): Promise<boolean> =
   return true
 }
 
-export const getWill = async (address, sdk: SafeAppsSDK): Promise<DisplayData> => {
-  const dieSmartInterface = new Interface(ABI)
-  const getWillData = dieSmartInterface.encodeFunctionData('getWill', [address])
+export const getWill = async (address: string, sdk: SafeAppsSDK): Promise<DisplayData> => {
+  const dieSmartInterface: Interface = new Interface(ABI)
+  const getWillData: string = dieSmartInterface.encodeFunctionData('getWill', [address])
 
   const getWillTransaction = {
     to: MM_ADDRESS,
@@ -233,9 +238,9 @@ export const getWill = async (address, sdk: SafeAppsSDK): Promise<DisplayData> =
   }
 }
 
-export const executeWill = async (sdk, ownerAddress) => {
-  const mmInterface = new Interface(ABI)
-  const executeData = mmInterface.encodeFunctionData('execute', [ownerAddress, 50000000000])
+export const executeWill = async (sdk: SafeAppsSDK, ownerAddress: string): Promise<void> => {
+  const mmInterface: Interface = new Interface(ABI)
+  const executeData: string = mmInterface.encodeFunctionData('execute', [ownerAddress, 50000000000])
   const executeWillTransaction: BaseTransaction = {
     to: MM_ADDRESS,
     value: '0',
@@ -247,15 +252,15 @@ export const executeWill = async (sdk, ownerAddress) => {
   })
 }
 
-export const executeWillByOwner = async (sdk, ownerAddress) => {
-  const mmInterface = new Interface(ABI)
-  const executeData = mmInterface.encodeFunctionData('execute', [ownerAddress, 500000000])
+export const executeWillByOwner = async (sdk: SafeAppsSDK, ownerAddress: any): Promise<void> => {
+  const mmInterface: Interface = new Interface(ABI)
+  const executeData: string = mmInterface.encodeFunctionData('execute', [ownerAddress, 500000000])
   const executeWillTransaction: BaseTransaction = {
     to: MM_ADDRESS,
     value: '0',
     data: executeData,
   }
-  const requestData = mmInterface.encodeFunctionData('requestExecution', [ownerAddress])
+  const requestData: string = mmInterface.encodeFunctionData('requestExecution', [ownerAddress])
   const requestTransaction: BaseTransaction = {
     to: MM_ADDRESS,
     value: '0',
@@ -267,7 +272,7 @@ export const executeWillByOwner = async (sdk, ownerAddress) => {
   })
 }
 
-export const deleteWill = async (sdk) => {
+export const deleteWill = async (sdk: SafeAppsSDK): Promise<void> => {
   const mmInterface = new Interface(ABI)
   const executeData = mmInterface.encodeFunctionData('deleteWill')
   const executeWillTransaction: BaseTransaction = {
@@ -281,9 +286,9 @@ export const deleteWill = async (sdk) => {
   })
 }
 
-export const requestExecution = async (owner, sdk) => {
-  const mmInterface = new Interface(ABI)
-  const requestData = mmInterface.encodeFunctionData('requestExecution', [owner])
+export const requestExecution = async (owner: string, sdk: SafeAppsSDK): Promise<void> => {
+  const mmInterface: Interface = new Interface(ABI)
+  const requestData: string = mmInterface.encodeFunctionData('requestExecution', [owner])
   const requestTransaction: BaseTransaction = {
     to: MM_ADDRESS,
     value: '0',
@@ -294,9 +299,9 @@ export const requestExecution = async (owner, sdk) => {
   })
 }
 
-export const cancelExecution = async (sdk) => {
+export const cancelExecution = async (sdk: SafeAppsSDK): Promise<void> => {
   const mmInterface = new Interface(ABI)
-  const cancelData = mmInterface.encodeFunctionData('cancelExecution')
+  const cancelData: string = mmInterface.encodeFunctionData('cancelExecution')
   const cancelTransaction: BaseTransaction = {
     to: MM_ADDRESS,
     value: '0',
@@ -307,7 +312,10 @@ export const cancelExecution = async (sdk) => {
   })
 }
 
-export const getIsExecutor = (data: DisplayData, safe): boolean => {
+export const getIsExecutor = (
+  data: DisplayData,
+  safe: { safeAddress: any; chainId?: number; threshold?: number; owners: any; isReadOnly?: boolean },
+): boolean => {
   for (let i = 0; i < data.executors.length; i += 1) {
     for (let j = 0; j < safe.owners.length; j += 1) {
       if (safe.safeAddress === data.executors[i] || safe.owners[j] === data.executors[i]) {

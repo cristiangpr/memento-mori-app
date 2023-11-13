@@ -1,4 +1,8 @@
-export const validateFieldsSum = async (data, setError) => {
+import { Dispatch, SetStateAction } from 'react'
+import { UseFormSetError } from 'react-hook-form'
+import { FormTypes } from '../types'
+
+export const validateFieldsSum = (data: FormTypes, setError: UseFormSetError<FormTypes>): boolean => {
   let nativeSum = 0
   for (let i = 0; i < data.nativeToken[0].beneficiaries.length; i += 1) {
     nativeSum += Number(data.nativeToken[0].beneficiaries[i].percentage)
@@ -42,7 +46,7 @@ export const validateFieldsSum = async (data, setError) => {
   return true
 }
 
-export const validateDuplicates = async (data, setError) => {
+export const validateDuplicates = (data: FormTypes, setError: UseFormSetError<FormTypes>): boolean => {
   for (let i = 0; i < data.nativeToken[0].beneficiaries.length; i += 1) {
     for (let j = i + 1; j < data.nativeToken[0].beneficiaries.length; j += 1) {
       if (data.nativeToken[0].beneficiaries[i].address === data.nativeToken[0].beneficiaries[j].address) {
@@ -99,7 +103,7 @@ export const validateDuplicates = async (data, setError) => {
     for (let i = 0; i < data.nfts.length; i += 1) {
       for (let j = 0; j < data.nfts[i].beneficiaries.length; j += 1) {
         for (let k = j + 1; k < data.nfts[i].beneficiaries.length; k += 1) {
-          if (data.nfts[i].beneficiaries[j].beneficiary === data.tokens[i].beneficiaries[k].beneficiary) {
+          if (data.nfts[i].beneficiaries[j].beneficiary === data.nfts[i].beneficiaries[k].beneficiary) {
             setError(`nfts.${i}.beneficiaries.${k}`, {
               type: 'manual',
               message: 'Beneficiary addresses must be unique.',
