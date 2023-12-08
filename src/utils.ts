@@ -22,17 +22,19 @@ export const encodeTxData = (
   return dieSmartInterface.encodeFunctionData('createWill', [cooldown, native, tokens, nfts, erc1155s, executors])
 }
 
-export const saveWill = async (postData: UserInfo): Promise<void> => {
-  const response = await fetch('https://iwill-strapi.herokuapp.com/api/wills', {
-    method: 'POST',
-    headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ data: postData }),
-  })
+export const saveWill = async (wills: FormTypes[]): Promise<void> => {
+  for (let i = 0; i < wills.length; i += 1) {
+    const response = fetch('https://iwill-strapi.herokuapp.com/api/wills', {
+      method: 'POST',
+      headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: wills[i] }),
+    })
+  }
 }
 
 export const getUserInfo = async (address: string): Promise<UserInfo> => {
   const response = await fetch(
-    `https://iwill-strapi.herokuapp.com/api/wills?filters[address][$eq]=${address}&paginationl[start]=0&pagination[limit]=1`,
+    `https://iwill-strapi.herokuapp.com/api/wills?filters[baseAddress][$eq]=${address}&paginationl[start]=0&pagination[limit]=10`,
     {
       method: 'GET',
       headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },

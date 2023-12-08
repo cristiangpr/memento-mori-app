@@ -41,6 +41,9 @@ export type UserInfo = {
   birthDate?: string
   address?: string
 }
+export interface Forms {
+  wills: FormTypes[]
+}
 
 export enum Form {
   Cooldown = 'cooldown',
