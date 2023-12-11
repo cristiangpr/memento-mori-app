@@ -1,152 +1,45 @@
 [
 	{
-		"inputs": [],
-		"name": "cancelExecution",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_cooldown",
-				"type": "uint256"
-			},
-			{
-				"components": [
-					{
-						"internalType": "address[]",
-						"name": "beneficiaries",
-						"type": "address[]"
-					},
-					{
-						"internalType": "uint8[]",
-						"name": "percentages",
-						"type": "uint8[]"
-					}
-				],
-				"internalType": "struct MementoMori.Native",
-				"name": "_native",
-				"type": "tuple"
-			},
-			{
-				"components": [
-					{
-						"internalType": "address",
-						"name": "contractAddress",
-						"type": "address"
-					},
-					{
-						"internalType": "address[]",
-						"name": "beneficiaries",
-						"type": "address[]"
-					},
-					{
-						"internalType": "uint8[]",
-						"name": "percentages",
-						"type": "uint8[]"
-					}
-				],
-				"internalType": "struct MementoMori.Token[]",
-				"name": "_tokens",
-				"type": "tuple[]"
-			},
-			{
-				"components": [
-					{
-						"internalType": "address",
-						"name": "contractAddress",
-						"type": "address"
-					},
-					{
-						"internalType": "uint256[]",
-						"name": "tokenIds",
-						"type": "uint256[]"
-					},
-					{
-						"internalType": "address[]",
-						"name": "beneficiaries",
-						"type": "address[]"
-					}
-				],
-				"internalType": "struct MementoMori.NFT[]",
-				"name": "_nfts",
-				"type": "tuple[]"
-			},
-			{
-				"components": [
-					{
-						"internalType": "address",
-						"name": "contractAddress",
-						"type": "address"
-					},
-					{
-						"internalType": "uint256",
-						"name": "tokenId",
-						"type": "uint256"
-					},
-					{
-						"internalType": "address[]",
-						"name": "beneficiaries",
-						"type": "address[]"
-					},
-					{
-						"internalType": "uint8[]",
-						"name": "percentages",
-						"type": "uint8[]"
-					}
-				],
-				"internalType": "struct MementoMori.ERC1155[]",
-				"name": "_1155s",
-				"type": "tuple[]"
-			},
-			{
-				"internalType": "address[]",
-				"name": "_executors",
-				"type": "address[]"
-			}
-		],
-		"name": "createWill",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "deleteWill",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "gasPrice",
-				"type": "uint256"
-			}
-		],
-		"name": "execute",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "uint256",
 				"name": "_fee",
 				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "_router",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_link",
+				"type": "address"
+			},
+			{
+				"internalType": "uint64",
+				"name": "_chainSelector",
+				"type": "uint64"
 			}
 		],
 		"stateMutability": "nonpayable",
 		"type": "constructor"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "currentBalance",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "calculatedFees",
+				"type": "uint256"
+			}
+		],
+		"name": "NotEnoughBalance",
+		"type": "error"
 	},
 	{
 		"inputs": [
@@ -201,223 +94,22 @@
 		"inputs": [
 			{
 				"indexed": true,
-				"internalType": "address",
-				"name": "previousOwner",
-				"type": "address"
+				"internalType": "bytes32",
+				"name": "messageId",
+				"type": "bytes32"
 			},
 			{
 				"indexed": true,
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "OwnershipTransferred",
-		"type": "event"
-	},
-	{
-		"inputs": [],
-		"name": "renounceOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			}
-		],
-		"name": "requestExecution",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_fee",
-				"type": "uint256"
-			}
-		],
-		"name": "setFee",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			}
-		],
-		"name": "WillCreated",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			}
-		],
-		"name": "WillDeleted",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			}
-		],
-		"name": "WillExecuted",
-		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address payable",
-				"name": "recipient",
-				"type": "address"
+				"internalType": "uint64",
+				"name": "destinationChainSelector",
+				"type": "uint64"
 			},
 			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "withdraw",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "balance",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "percentage",
-				"type": "uint256"
-			}
-		],
-		"name": "calculateAmount",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "pure",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "balance",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "percentage",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "numBeneficiaries",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "gasPrice",
-				"type": "uint256"
-			}
-		],
-		"name": "calculateNativeAmount",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "pure",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
+				"indexed": false,
 				"internalType": "address",
-				"name": "",
+				"name": "receiver",
 				"type": "address"
-			}
-		],
-		"name": "exists",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "fee",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_address",
-				"type": "address"
-			}
-		],
-		"name": "getWill",
-		"outputs": [
+			},
 			{
 				"components": [
 					{
@@ -448,9 +140,9 @@
 								"type": "uint8[]"
 							}
 						],
-						"internalType": "struct MementoMori.Native",
+						"internalType": "struct MementoMori.Native[]",
 						"name": "native",
-						"type": "tuple"
+						"type": "tuple[]"
 					},
 					{
 						"components": [
@@ -527,11 +219,295 @@
 						"internalType": "address[]",
 						"name": "executors",
 						"type": "address[]"
+					},
+					{
+						"internalType": "uint64",
+						"name": "chainSelector",
+						"type": "uint64"
+					},
+					{
+						"internalType": "address",
+						"name": "safe",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "xChainAddress",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "baseAddress",
+						"type": "address"
 					}
 				],
+				"indexed": false,
 				"internalType": "struct MementoMori.Will",
-				"name": "",
+				"name": "will",
 				"type": "tuple"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "feeToken",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "fees",
+				"type": "uint256"
+			}
+		],
+		"name": "MessageSent",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "previousOwner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "WillCreated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "WillDeleted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "WillExecuted",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "balance",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "percentage",
+				"type": "uint256"
+			}
+		],
+		"name": "calculateAmount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "pure",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"components": [
+					{
+						"internalType": "bool",
+						"name": "isActive",
+						"type": "bool"
+					},
+					{
+						"internalType": "uint256",
+						"name": "requestTime",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "cooldown",
+						"type": "uint256"
+					},
+					{
+						"components": [
+							{
+								"internalType": "address[]",
+								"name": "beneficiaries",
+								"type": "address[]"
+							},
+							{
+								"internalType": "uint8[]",
+								"name": "percentages",
+								"type": "uint8[]"
+							}
+						],
+						"internalType": "struct MementoMori.Native[]",
+						"name": "native",
+						"type": "tuple[]"
+					},
+					{
+						"components": [
+							{
+								"internalType": "address",
+								"name": "contractAddress",
+								"type": "address"
+							},
+							{
+								"internalType": "address[]",
+								"name": "beneficiaries",
+								"type": "address[]"
+							},
+							{
+								"internalType": "uint8[]",
+								"name": "percentages",
+								"type": "uint8[]"
+							}
+						],
+						"internalType": "struct MementoMori.Token[]",
+						"name": "tokens",
+						"type": "tuple[]"
+					},
+					{
+						"components": [
+							{
+								"internalType": "address",
+								"name": "contractAddress",
+								"type": "address"
+							},
+							{
+								"internalType": "uint256[]",
+								"name": "tokenIds",
+								"type": "uint256[]"
+							},
+							{
+								"internalType": "address[]",
+								"name": "beneficiaries",
+								"type": "address[]"
+							}
+						],
+						"internalType": "struct MementoMori.NFT[]",
+						"name": "nfts",
+						"type": "tuple[]"
+					},
+					{
+						"components": [
+							{
+								"internalType": "address",
+								"name": "contractAddress",
+								"type": "address"
+							},
+							{
+								"internalType": "uint256",
+								"name": "tokenId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "address[]",
+								"name": "beneficiaries",
+								"type": "address[]"
+							},
+							{
+								"internalType": "uint8[]",
+								"name": "percentages",
+								"type": "uint8[]"
+							}
+						],
+						"internalType": "struct MementoMori.ERC1155[]",
+						"name": "erc1155s",
+						"type": "tuple[]"
+					},
+					{
+						"internalType": "address[]",
+						"name": "executors",
+						"type": "address[]"
+					},
+					{
+						"internalType": "uint64",
+						"name": "chainSelector",
+						"type": "uint64"
+					},
+					{
+						"internalType": "address",
+						"name": "safe",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "xChainAddress",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "baseAddress",
+						"type": "address"
+					}
+				],
+				"internalType": "struct MementoMori.Will[]",
+				"name": "wills",
+				"type": "tuple[]"
+			}
+		],
+		"name": "execute",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "fee",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getBalance",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -551,6 +527,169 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"components": [
+					{
+						"internalType": "bool",
+						"name": "isActive",
+						"type": "bool"
+					},
+					{
+						"internalType": "uint256",
+						"name": "requestTime",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "cooldown",
+						"type": "uint256"
+					},
+					{
+						"components": [
+							{
+								"internalType": "address[]",
+								"name": "beneficiaries",
+								"type": "address[]"
+							},
+							{
+								"internalType": "uint8[]",
+								"name": "percentages",
+								"type": "uint8[]"
+							}
+						],
+						"internalType": "struct MementoMori.Native[]",
+						"name": "native",
+						"type": "tuple[]"
+					},
+					{
+						"components": [
+							{
+								"internalType": "address",
+								"name": "contractAddress",
+								"type": "address"
+							},
+							{
+								"internalType": "address[]",
+								"name": "beneficiaries",
+								"type": "address[]"
+							},
+							{
+								"internalType": "uint8[]",
+								"name": "percentages",
+								"type": "uint8[]"
+							}
+						],
+						"internalType": "struct MementoMori.Token[]",
+						"name": "tokens",
+						"type": "tuple[]"
+					},
+					{
+						"components": [
+							{
+								"internalType": "address",
+								"name": "contractAddress",
+								"type": "address"
+							},
+							{
+								"internalType": "uint256[]",
+								"name": "tokenIds",
+								"type": "uint256[]"
+							},
+							{
+								"internalType": "address[]",
+								"name": "beneficiaries",
+								"type": "address[]"
+							}
+						],
+						"internalType": "struct MementoMori.NFT[]",
+						"name": "nfts",
+						"type": "tuple[]"
+					},
+					{
+						"components": [
+							{
+								"internalType": "address",
+								"name": "contractAddress",
+								"type": "address"
+							},
+							{
+								"internalType": "uint256",
+								"name": "tokenId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "address[]",
+								"name": "beneficiaries",
+								"type": "address[]"
+							},
+							{
+								"internalType": "uint8[]",
+								"name": "percentages",
+								"type": "uint8[]"
+							}
+						],
+						"internalType": "struct MementoMori.ERC1155[]",
+						"name": "erc1155s",
+						"type": "tuple[]"
+					},
+					{
+						"internalType": "address[]",
+						"name": "executors",
+						"type": "address[]"
+					},
+					{
+						"internalType": "uint64",
+						"name": "chainSelector",
+						"type": "uint64"
+					},
+					{
+						"internalType": "address",
+						"name": "safe",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "xChainAddress",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "baseAddress",
+						"type": "address"
+					}
+				],
+				"internalType": "struct MementoMori.Will[]",
+				"name": "wills",
+				"type": "tuple[]"
+			}
+		],
+		"name": "saveWillHash",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -558,42 +697,33 @@
 				"type": "address"
 			}
 		],
-		"name": "willMap",
+		"name": "willHashes",
 		"outputs": [
 			{
-				"internalType": "bool",
-				"name": "isActive",
-				"type": "bool"
-			},
-			{
-				"internalType": "uint256",
-				"name": "requestTime",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "cooldown",
-				"type": "uint256"
-			},
-			{
-				"components": [
-					{
-						"internalType": "address[]",
-						"name": "beneficiaries",
-						"type": "address[]"
-					},
-					{
-						"internalType": "uint8[]",
-						"name": "percentages",
-						"type": "uint8[]"
-					}
-				],
-				"internalType": "struct MementoMori.Native",
-				"name": "native",
-				"type": "tuple"
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address payable",
+				"name": "recipient",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "withdraw",
+		"outputs": [],
+		"stateMutability": "payable",
 		"type": "function"
 	}
 ]

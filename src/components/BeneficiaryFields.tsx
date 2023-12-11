@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react'
 import { Controller, useFieldArray } from 'react-hook-form'
 import { Button, TextFieldInput } from '@gnosis.pm/safe-react-components'
-import { ErrorDescription } from 'ethers'
 import { LeftColumn, RightColumn, Row } from './FormElements'
 
-export default function BeneficiaryFields({ tokenType, nestIndex, control, errors, clearErrors }): React.ReactElement {
+export default function BeneficiaryFields({
+  willIndex,
+  tokenType,
+  nestIndex,
+  control,
+  errors,
+  clearErrors,
+}): React.ReactElement {
   const isNative = tokenType === 'nativeToken'
   const {
     fields: beneficiaryFields,
@@ -12,7 +18,7 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
     append: appendBeneficiary,
   } = useFieldArray({
     control,
-    name: `${tokenType}.${nestIndex}.beneficiaries`,
+    name: `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries`,
   })
 
   return (
@@ -26,8 +32,8 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
                 rules={{ required: true }}
                 name={
                   tokenType === 'nfts'
-                    ? `${tokenType}.${nestIndex}.beneficiaries.${index}.tokenId`
-                    : `${tokenType}.${nestIndex}.beneficiaries.${index}.address.`
+                    ? `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.tokenId`
+                    : `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.address.`
                 }
                 render={({
                   field: { onChange, onBlur, value, name, ref },
@@ -50,8 +56,8 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
                     }
                     name={
                       tokenType === 'nfts'
-                        ? `${tokenType}.${nestIndex}.beneficiaries.${index}.tokenId`
-                        : `${tokenType}.${nestIndex}.beneficiaries.${index}.address`
+                        ? `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.tokenId`
+                        : `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.address`
                     }
                     error={errors[tokenType] && errors[tokenType][nestIndex] && errors[tokenType][nestIndex].message}
                   />
@@ -63,8 +69,8 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
                 control={control}
                 name={
                   tokenType === 'nfts'
-                    ? `${tokenType}.${nestIndex}.beneficiaries.${index}.beneficiary`
-                    : `${tokenType}.${nestIndex}.beneficiaries.${index}.percentage`
+                    ? `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.beneficiary`
+                    : `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.percentage`
                 }
                 render={({
                   field: { onChange, onBlur, value, name, ref },
@@ -72,7 +78,7 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
                   formState,
                 }) => (
                   <TextFieldInput
-                    value={tokenType === 'nfts' ? value : Number(value)}
+                    value={value}
                     onBlur={() => {
                       onBlur()
                       clearErrors()
@@ -82,8 +88,8 @@ export default function BeneficiaryFields({ tokenType, nestIndex, control, error
                     label={tokenType === 'nfts' ? 'beneficiary address' : 'percentage'}
                     name={
                       tokenType === 'nfts'
-                        ? `${tokenType}.${nestIndex}.beneficiaries.${index}.address`
-                        : `${tokenType}.${nestIndex}.beneficiaries.${index}.percentage`
+                        ? `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.address`
+                        : `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.percentage`
                     }
                     helperText={tokenType !== 'nfts' && 'Make sure percentages add up to 100'}
                     error={

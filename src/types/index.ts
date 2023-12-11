@@ -46,21 +46,33 @@ export interface Forms {
 }
 
 export enum Form {
+  IsActive = 'isActive',
+  RequestTime = 'requestTime',
   Cooldown = 'cooldown',
-  NativeToken = 'nativeToken',
+  NativeToken = 'native',
   Tokens = 'tokens',
   NFTS = 'nfts',
   Erc1155s = 'erc1155s',
   Executors = 'executors',
+  ChainSelector = 'chainSelector',
+  Safe = 'safe',
+  BaseAddress = 'baseAddress',
+  XChainAddress = 'xChainAddress',
 }
 
 export interface FormTypes {
-  [Form.Cooldown]: number
+  [Form.IsActive]: boolean
+  [Form.RequestTime]: string
+  [Form.Cooldown]: string
   [Form.NativeToken]: NativeToken[]
   [Form.Erc1155s]: Erc1155[]
   [Form.Tokens]: Token[]
   [Form.NFTS]: NFT[]
   [Form.Executors]: string[]
+  [Form.ChainSelector]: string
+  [Form.Safe]: string
+  [Form.BaseAddress]: string
+  [Form.XChainAddress]: string
 }
 
 export type DisplayData = {

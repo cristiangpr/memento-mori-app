@@ -16,7 +16,7 @@ import {
 } from '@gnosis.pm/safe-react-components'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
-import { BaseContract, Contract, JsonRpcProvider, ZeroAddress, getAddress, getDefaultProvider } from 'ethers'
+import { BaseContract, Contract, getDefaultProvider } from 'ethers'
 import { useSafeBalances } from '../hooks/useSafeBalances'
 import BalancesTable from './BalancesTable'
 import { DisplayData, Form, FormTypes } from '../types'
@@ -33,16 +33,16 @@ import {
 import { Container, Row, LeftColumn, RightColumn, WillForm } from './FormElements'
 // eslint-disable-next-line import/no-cycle
 import BeneficiaryFields from './BeneficiaryFields'
-import { MM_ADDRESS } from '../constants'
+import { sepoliaMmAddress } from '../constants'
 import ABI from '../abis/mementoMori.json'
 import { validateDuplicates, validateFieldsSum } from '../validation'
 
 function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement {
   const { sdk } = useSafeAppsSDK()
   const [balances] = useSafeBalances(sdk)
-  const { fields: nativeTokenFields } = useFieldArray({
+  const { fields: nativeTokenFields, replace } = useFieldArray({
     control,
-    name: 'nativeToken',
+    name: `wills.${nestIndex}.native`,
   })
   const {
     fields: tokenFields,
@@ -50,7 +50,7 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
     remove: removeToken,
   } = useFieldArray({
     control,
-    name: 'tokens',
+    name: `wills.${nestIndex}.tokens`,
   })
 
   const {
@@ -59,7 +59,7 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
     remove: removeNft,
   } = useFieldArray({
     control,
-    name: 'nfts',
+    name: `wills.${nestIndex}.nfts`,
   })
 
   const {
@@ -68,20 +68,24 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
     remove: remove1155,
   } = useFieldArray({
     control,
-    name: 'erc1155s',
+    name: `wills.${nestIndex}.erc1155s`,
   })
 
   return (
     <div>
+      {nestIndex > 0 && <Title size="md">{`My Cross Chain Will ${nestIndex}`}</Title>}
       <Title size="sm">Step 1.- Native Token Beneficiaries</Title>
       <Row>
         Define at least one beneficiary for your native tokens (ETH, MATIC). Each beneficiary will recieve the
         percentage of your tokens entered next to their address. This step is required.
       </Row>
+      {console.log(nativeTokenFields)}
       {nativeTokenFields.map((element, index) => {
         return (
           <BeneficiaryFields
-            tokenType="nativeToken"
+            key={element.id}
+            willIndex={nestIndex}
+            tokenType="native"
             nestIndex={index}
             control={control}
             errors={errors}
@@ -98,8 +102,13 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
         to your will by clicking the "Add Token" button. If you don't see your tokens on the list you may add them
         manually using the form below. If you have no ERC20 tokens you wish to inherit you may skip this step
       </Row>
-      <Title size="sm">Your Tokens</Title>
-      {nestIndex === 0 && <BalancesTable balances={balances} addToken={appendToken} />}
+
+      {nestIndex === 0 && (
+        <>
+          <Title size="sm">Your Tokens</Title>
+          <BalancesTable balances={balances} addToken={appendToken} />
+        </>
+      )}
       {tokenFields.map((element, index) => {
         return (
           <div key={element.id}>
@@ -107,7 +116,7 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
             <Row>
               <Controller
                 control={control}
-                name={`tokens.${index}.contractAddress`}
+                name={`wills.${nestIndex}.tokens.${index}.contractAddress`}
                 rules={{ required: true }}
                 render={({
                   field: { onChange, onBlur, value, name, ref },
@@ -119,7 +128,7 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
                     onChange={onChange} // send value to hook form
                     inputRef={ref}
                     label="contract address"
-                    name={`tokens.${index}.contractAddress`}
+                    name={`wills.${nestIndex}.tokens.${index}.contractAddress`}
                     value={value}
                     error={
                       errors && errors.tokens && errors.tokens[index] && errors.tokens[index].contractAddress
@@ -131,6 +140,7 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
               />
             </Row>
             <BeneficiaryFields
+              willIndex={nestIndex}
               tokenType="tokens"
               nestIndex={index}
               control={control}
@@ -141,13 +151,18 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
         )
       })}
       <Button
+        style={{ marginTop: '1rem' }}
         size="md"
         onClick={() => appendToken({ contractAddress: '', beneficiaries: [{ address: '', percentage: null }] })}
       >
         Add Token
       </Button>
       {tokenFields.length > 0 && (
-        <Button size="md" style={{ marginLeft: '1rem' }} onClick={() => removeToken(tokenFields.length - 1)}>
+        <Button
+          size="md"
+          style={{ marginLeft: '1rem', marginTop: '1rem' }}
+          onClick={() => removeToken(tokenFields.length - 1)}
+        >
           Remove Token
         </Button>
       )}
@@ -163,7 +178,7 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
             <Row>
               <Controller
                 control={control}
-                name={`nfts.${index}.contractAddress`}
+                name={`wills.${nestIndex}.nfts.${index}.contractAddress`}
                 rules={{ required: true }}
                 render={({
                   field: { onChange, onBlur, value, name, ref },
@@ -175,7 +190,7 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
                     onChange={onChange} // send value to hook form
                     inputRef={ref}
                     label="contract address"
-                    name={`nfts.${index}.contractAddress`}
+                    name={`wills.${nestIndex}.nfts.${index}.contractAddress`}
                     value={value}
                     error={error?.type}
                   />
@@ -183,6 +198,7 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
               />
             </Row>
             <BeneficiaryFields
+              willIndex={nestIndex}
               tokenType="nfts"
               nestIndex={index}
               control={control}
@@ -217,7 +233,7 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
               <LeftColumn>
                 <Controller
                   control={control}
-                  name={`erc1155s.${index}.contractAddress`}
+                  name={`wills.${nestIndex}.erc1155s.${index}.contractAddress`}
                   rules={{ required: true }}
                   render={({
                     field: { onChange, onBlur, value, name, ref },
@@ -229,7 +245,7 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
                       onChange={onChange} // send value to hook form
                       inputRef={ref}
                       label="contract address"
-                      name={`erc1155s.${index}.contractAddress`}
+                      name={`wills.${nestIndex}.erc1155s.${index}.contractAddress`}
                       error={error?.type}
                     />
                   )}
@@ -238,7 +254,7 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
               <RightColumn>
                 <Controller
                   control={control}
-                  name={`erc1155s.${index}.tokenId`}
+                  name={`wills.${nestIndex}.erc1155s.${index}.tokenId`}
                   rules={{ required: true }}
                   render={({
                     field: { onChange, onBlur, value, name, ref },
@@ -250,7 +266,7 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
                       onChange={onChange} // send value to hook form
                       inputRef={ref}
                       label="token id"
-                      name={`erc1155s.${index}.tokenId`}
+                      name={`wills.${nestIndex}.erc1155s.${index}.tokenId`}
                       error={error?.type}
                     />
                   )}
@@ -258,6 +274,7 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
               </RightColumn>
             </Row>
             <BeneficiaryFields
+              willIndex={nestIndex}
               tokenType="erc1155s"
               nestIndex={index}
               control={control}
@@ -280,35 +297,99 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
           Remove ERC1155
         </Button>
       )}
-      <Title size="sm">Step 5.- Cooldown Period</Title>
-      <Row>Define the period iseconds after an execution request is made where you may still cancel execution.</Row>
-      <Row>
-        <LeftColumn>
-          <Controller
-            control={control}
-            name="cooldown"
-            rules={{ required: true }}
-            render={({
-              field: { onChange, onBlur, value, name, ref },
-              fieldState: { invalid, isTouched, isDirty, error },
-              formState,
-            }) => (
-              <TextFieldInput
-                value={value}
-                type="number"
-                onBlur={onBlur} // notify when input is touched
-                onChange={onChange} // send value to hook form
-                ref={ref}
-                label="cooldown period in seconds"
-                name="cooldown"
-                error={error?.type}
-                showErrorsInTheLabel
+      {nestIndex === 0 ? (
+        <>
+          <Title size="sm">Step 5.- Cooldown Period</Title>
+          <Row>Define the period iseconds after an execution request is made where you may still cancel execution.</Row>
+          <Row>
+            <LeftColumn>
+              <Controller
+                control={control}
+                name={`wills.${nestIndex}.cooldown`}
+                rules={{ required: true }}
+                render={({
+                  field: { onChange, onBlur, value, name, ref },
+                  fieldState: { invalid, isTouched, isDirty, error },
+                  formState,
+                }) => (
+                  <TextFieldInput
+                    value={value}
+                    onBlur={onBlur} // notify when input is touched
+                    onChange={onChange} // send value to hook form
+                    ref={ref}
+                    label="cooldown period in seconds"
+                    name={`wills.${nestIndex}.cooldown`}
+                    error={error?.type}
+                    showErrorsInTheLabel
+                  />
+                )}
               />
-            )}
-          />
-        </LeftColumn>
-        <RightColumn />
-      </Row>
+            </LeftColumn>
+            <RightColumn />
+          </Row>
+        </>
+      ) : (
+        <>
+          <Row>
+            <Title size="sm">Step 5.- Chain Selector</Title>
+            <Row>Enter the chain selector for the network your additional Safe is deployed on.</Row>
+            <LeftColumn>
+              <Controller
+                control={control}
+                name={`wills.${nestIndex}.chainSelector`}
+                rules={{ required: true }}
+                render={({
+                  field: { onChange, onBlur, value, name, ref },
+                  fieldState: { invalid, isTouched, isDirty, error },
+                  formState,
+                }) => (
+                  <TextFieldInput
+                    value={value}
+                    type="string"
+                    onBlur={onBlur} // notify when input is touched
+                    onChange={onChange} // send value to hook form
+                    ref={ref}
+                    label="destination chain selector"
+                    name={`wills.${nestIndex}.chainSelector`}
+                    error={error?.type}
+                    showErrorsInTheLabel
+                  />
+                )}
+              />
+            </LeftColumn>
+            <RightColumn />
+          </Row>
+          <Row>
+            <Title size="sm">Step 6.- Cross Chain Safe Address</Title>
+            <Row>Enter the address of your additional Safe.</Row>
+            <LeftColumn>
+              <Controller
+                control={control}
+                name={`wills.${nestIndex}.safe`}
+                rules={{ required: true }}
+                render={({
+                  field: { onChange, onBlur, value, name, ref },
+                  fieldState: { invalid, isTouched, isDirty, error },
+                  formState,
+                }) => (
+                  <TextFieldInput
+                    value={value}
+                    type="string"
+                    onBlur={onBlur} // notify when input is touched
+                    onChange={onChange} // send value to hook form
+                    ref={ref}
+                    label="destination chain safe address"
+                    name={`wills.${nestIndex}.safe`}
+                    error={error?.type}
+                    showErrorsInTheLabel
+                  />
+                )}
+              />
+            </LeftColumn>
+            <RightColumn />
+          </Row>
+        </>
+      )}
     </div>
   )
 }

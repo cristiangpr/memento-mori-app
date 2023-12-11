@@ -4,11 +4,11 @@ import { FormTypes } from '../types'
 
 export const validateFieldsSum = (data: FormTypes, setError: UseFormSetError<FormTypes>): boolean => {
   let nativeSum = 0
-  for (let i = 0; i < data.nativeToken[0].beneficiaries.length; i += 1) {
-    nativeSum += Number(data.nativeToken[0].beneficiaries[i].percentage)
+  for (let i = 0; i < data.native[0].beneficiaries.length; i += 1) {
+    nativeSum += Number(data.native[0].beneficiaries[i].percentage)
   }
   if (nativeSum !== 100) {
-    setError(`nativeToken.${0}.beneficiaries`, {
+    setError(`native.${0}.beneficiaries`, {
       type: 'manual',
       message: 'Field values must add up to 100.',
     })
@@ -47,10 +47,10 @@ export const validateFieldsSum = (data: FormTypes, setError: UseFormSetError<For
 }
 
 export const validateDuplicates = (data: FormTypes, setError: UseFormSetError<FormTypes>): boolean => {
-  for (let i = 0; i < data.nativeToken[0].beneficiaries.length; i += 1) {
-    for (let j = i + 1; j < data.nativeToken[0].beneficiaries.length; j += 1) {
-      if (data.nativeToken[0].beneficiaries[i].address === data.nativeToken[0].beneficiaries[j].address) {
-        setError(`nativeToken.${i}`, {
+  for (let i = 0; i < data.native[0].beneficiaries.length; i += 1) {
+    for (let j = i + 1; j < data.native[0].beneficiaries.length; j += 1) {
+      if (data.native[0].beneficiaries[i].address === data.native[0].beneficiaries[j].address) {
+        setError(`native.${i}`, {
           type: 'manual',
           message: 'Beneficiary addresses must be unique.',
         })

@@ -16,7 +16,7 @@ import {
 } from '@gnosis.pm/safe-react-components'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
-import { BaseContract, Contract, JsonRpcProvider, ZeroAddress, getAddress, getDefaultProvider } from 'ethers'
+import { BaseContract, Contract, ethers, getDefaultProvider } from 'ethers'
 import { useSafeBalances } from '../hooks/useSafeBalances'
 import BalancesTable from './BalancesTable'
 import { DisplayData, Form, FormTypes, Forms } from '../types'
@@ -29,11 +29,13 @@ import {
   getExecTime,
   getWill,
   requestExecution,
+  saveWill,
+  saveWillHash,
 } from '../utils'
 import { Container, Row, LeftColumn, RightColumn, WillForm } from './FormElements'
 // eslint-disable-next-line import/no-cycle
 import BeneficiaryFields from './BeneficiaryFields'
-import { MM_ADDRESS } from '../constants'
+import { baseGMmAddressMmAddress, sepoliaChainSelector, sepoliaMmAddress } from '../constants'
 import ABI from '../abis/mementoMori.json'
 import { validateDuplicates, validateFieldsSum } from '../validation'
 import MyWill from './MyWill'
@@ -51,6 +53,7 @@ function MyWills(): React.ReactElement {
   const [isExecuteOpen, setIsExecuteOpen] = useState<boolean>(false)
   const [isCancelOpen, setIsCancelOpen] = useState<boolean>(false)
   const [success, setSuccess] = useState<boolean>(false)
+  const [mm, setMm] = useState<FormTypes[]>()
 
   const {
     register,
@@ -67,7 +70,9 @@ function MyWills(): React.ReactElement {
     defaultValues: {
       wills: [
         {
-          [Form.Cooldown]: null,
+          [Form.Cooldown]: '',
+          [Form.IsActive]: true,
+          [Form.RequestTime]: Math.floor(Date.now() / 1000).toString(),
 
           [Form.NativeToken]: [
             {
@@ -78,10 +83,22 @@ function MyWills(): React.ReactElement {
           [Form.Tokens]: displayData ? displayData.tokens : [],
           [Form.NFTS]: displayData ? displayData.nfts : [],
           [Form.Erc1155s]: displayData ? displayData.erc1155s : [],
+          [Form.ChainSelector]: sepoliaChainSelector,
+          [Form.Safe]: safe.safeAddress,
+          [Form.BaseAddress]: safe.safeAddress,
+          [Form.XChainAddress]: safe.safeAddress,
         },
       ],
     },
   })
+  useEffect(() => {
+    if (mm && mm[0].isActive) {
+      setExecTime(getExecTime(mm[0]))
+      if (getExecTime(mm[0]) <= Date.now()) {
+        setIsExecutable(true)
+      }
+    }
+  }, [mm, safe, sdk])
   /* useEffect(() => {
     const loadData = async () => {
       const data = await getWill(safe.safeAddress, sdk)
@@ -120,22 +137,30 @@ function MyWills(): React.ReactElement {
     name: 'wills',
   })
 
-  /* const onSubmit = async (data): Promise<void> => {
+  const onSubmit = async (data: Forms): Promise<void> => {
     console.log('url', process.env.REACT_APP_RPC_URL)
-    const sumValidated = await validateFieldsSum(data, setError)
-    const validated = await validateDuplicates(data, setError)
+    const sumValidated = true // await validateFieldsSum(data, setError)
+    const validated = true // await validateDuplicates(data, setError)
+
     if (validated && sumValidated) {
-      const newData = formatData(data, safe.safeAddress)
-      setIsCreateOpen(true)
-      await createWill(newData, sdk, safe)
-      const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
-      const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+      const formattedData = []
+      for (let i = 0; i < data.wills.length; i += 1) {
+        const formattedWill = formatData(data.wills[i], safe.safeAddress)
+        formattedData.push(formattedWill)
+      }
+
+      await saveWill(formattedData)
+      await saveWillHash(formattedData, sdk, safe)
+      setMm(formattedData)
+
+      /*   const provider = new ethers.providers.JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+      const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
+
       contract.on('WillCreated', (ownerAddress) => {
-        console.log('event', ownerAddress)
-        if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
+        if (ethers.utils.getAddress(ownerAddress) === ethers.utils.getAddress(safe.safeAddress)) {
           setSuccess(true)
-          setIsCreateOpen(true)
-          reset({
+          setIsCreateOpen(false)
+          /* reset({
             wills: [
               {
                 cooldown: Number(displayData.cooldown),
@@ -145,17 +170,18 @@ function MyWills(): React.ReactElement {
                 erc1155s: displayData.erc1155s,
               },
             ],
-          })
-        }
-      })
+          }) 
+        } 
+    
+      }) */
     }
-  } */
+  }
   const handleDelete = async (): Promise<void> => {
     setSuccess(false)
     setIsDeleteOpen(true)
     await deleteWill(sdk)
-    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
-    const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+    const provider = new ethers.providers.JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     contract.on('WillDeleted', (ownerAddress) => {
       if (ownerAddress === safe.safeAddress) {
         setSuccess(true)
@@ -164,7 +190,7 @@ function MyWills(): React.ReactElement {
           wills: [
             {
               cooldown: null,
-              nativeToken: [],
+              native: [],
               tokens: [],
               nfts: [],
               erc1155s: [],
@@ -178,8 +204,8 @@ function MyWills(): React.ReactElement {
     setSuccess(false)
     setIsRequestOpen(true)
     await requestExecution(safe.safeAddress, sdk)
-    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
-    const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+    const provider = new ethers.providers.JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     contract.on('ExecutionRequested', (ownerAddress) => {
       if (ownerAddress === safe.safeAddress) {
         setSuccess(true)
@@ -191,8 +217,8 @@ function MyWills(): React.ReactElement {
     setSuccess(false)
     setIsCancelOpen(true)
     await cancelExecution(sdk)
-    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
-    const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+    const provider = new ethers.providers.JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     contract.on('ExecutionCancelled', (ownerAddress) => {
       if (ownerAddress === safe.safeAddress) {
         setSuccess(true)
@@ -200,18 +226,16 @@ function MyWills(): React.ReactElement {
       }
     })
   }
-  const handleExecute = async (): Promise<void> => {
-    setSuccess(false)
-    setIsExecuteOpen(true)
-    await executeWill(sdk, safe.safeAddress)
-    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
-    const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+  const handleExecute = async (wills: FormTypes[]): Promise<void> => {
+    await executeWill(sdk, wills)
+    /* const provider = new ethers.providers.JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     contract.on('WillExecuted', (ownerAddress) => {
       if (ownerAddress === safe.safeAddress) {
         setSuccess(true)
         setIsExecuteOpen(true)
       }
-    })
+    }) */
   }
   const handleScroll = (e: FormEvent<HTMLInputElement>) => {
     e.currentTarget.blur()
@@ -236,8 +260,10 @@ function MyWills(): React.ReactElement {
     setIsExecuteOpen(false)
     setSuccess(false)
   }
+
   return (
     <Container>
+      {console.log(mm)}
       {isCreateOpen && (
         <div style={{ justifyContent: 'right' }}>
           <GenericModal
@@ -357,27 +383,47 @@ function MyWills(): React.ReactElement {
           : 'Follow the steps below to create a will. Make sure at least one beneficiary is a Safe so they may request execution using this app. Non Safe addresses may request execution by interacting directly with the contract.'}
       </Row>
 
-      <WillForm>
+      <WillForm onSubmit={handleSubmit(onSubmit)}>
         {willFields.map((element, index) => {
-          return <MyWill nestIndex={index} control={control} errors={errors} clearErrors={clearErrors} />
+          console.log(willFields)
+          return (
+            <MyWill key={element.id} nestIndex={index} control={control} errors={errors} clearErrors={clearErrors} />
+          )
         })}
         <Row style={{ justifyContent: 'center' }}>
           <Button
             size="md"
             onClick={() =>
               appendWill({
-                cooldown: null,
-                nativeToken: [],
+                cooldown: '0',
+                isActive: false,
+                requestTime: '0',
+                native: [
+                  {
+                    beneficiaries: [{ address: '', percentage: null }],
+                  },
+                ],
                 tokens: [],
                 nfts: [],
                 erc1155s: [],
                 executors: [],
+                chainSelector: '',
+                safe: '',
+                baseAddress: safe.safeAddress,
+                xChainAddress: baseGMmAddressMmAddress,
               })
             }
           >
-            Add Token
+            Add Cross Chain Will
           </Button>
         </Row>
+        {willFields.length > 1 && (
+          <Row style={{ justifyContent: 'center' }}>
+            <Button size="md" onClick={() => removeWill(willFields.length - 1)}>
+              Remove Cross Chain Will
+            </Button>
+          </Row>
+        )}
 
         <Row style={{ justifyContent: 'center' }}>
           <Button size="md" type="submit">
@@ -414,7 +460,7 @@ function MyWills(): React.ReactElement {
         )}
         {isExecutable && (
           <Row style={{ justifyContent: 'center' }}>
-            <Button size="md" onClick={() => handleExecute()}>
+            <Button size="md" onClick={() => handleExecute(mm)}>
               Execute Will
             </Button>
           </Row>

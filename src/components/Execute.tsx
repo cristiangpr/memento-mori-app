@@ -2,11 +2,11 @@
 import React, { useEffect, useState } from 'react'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
 import { Title, Button, TextFieldInput, GenericModal, Loader, Dot, Icon } from '@gnosis.pm/safe-react-components'
-import { BaseContract, JsonRpcProvider } from 'ethers'
+import { BaseContract, ethers } from 'ethers'
 import { executeWill, getExecTime, getWill, getIsExecutor, requestExecution } from '../utils'
 import { DisplayData } from '../types'
 import { Container, LeftColumn, RightColumn, Row, Will, WillForm } from './FormElements'
-import { MM_ADDRESS } from '../constants'
+import { sepoliaMmAddress } from '../constants'
 import ABI from '../abis/mementoMori.json'
 
 function Execute(): React.ReactElement {
@@ -31,8 +31,8 @@ function Execute(): React.ReactElement {
     setSuccess(false)
     setIsRequestOpen(true)
     await requestExecution(ownerAddress, sdk)
-    const provider: JsonRpcProvider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
-    const contract: BaseContract = new BaseContract(MM_ADDRESS, ABI, provider)
+    const provider = new ethers.providers.JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract: BaseContract = new BaseContract(sepoliaMmAddress, ABI, provider)
     contract.on('ExecutionRequested', (address) => {
       if (ownerAddress === address) {
         setSuccess(true)
@@ -40,19 +40,19 @@ function Execute(): React.ReactElement {
       }
     })
   }
-  const handleExecute = async () => {
+  /* const handleExecute = async () => {
     setSuccess(false)
     setIsExecuteOpen(true)
     await executeWill(sdk, ownerAddress)
-    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
-    const contract = new BaseContract(MM_ADDRESS, ABI, provider)
+    const provider = new ethers.providers.JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     contract.on('WillExecuted', (address) => {
       if (ownerAddress === address) {
         setSuccess(true)
         setIsExecuteOpen(true)
       }
     })
-  }
+  } */
   const handleRequestClose = (): void => {
     setIsRequestOpen(false)
     setSuccess(false)
@@ -62,7 +62,7 @@ function Execute(): React.ReactElement {
     setSuccess(false)
   }
 
-  useEffect(() => {
+  /* useEffect(() => {
     if (displayData) {
       setIsExecutor(getIsExecutor(displayData, safe))
     }
@@ -72,7 +72,7 @@ function Execute(): React.ReactElement {
         setIsExecutable(true)
       }
     }
-  }, [displayData, safe])
+  }, [displayData, safe]) */
 
   return (
     <Container>
@@ -259,13 +259,13 @@ function Execute(): React.ReactElement {
               {console.log('exec', execTime)}
             </div>
           )}
-          {isExecutable && (
+          {/* isExecutable && (
             <div style={{ padding: '20px' }}>
               <Button size="md" onClick={() => handleExecute()}>
                 Execute Will
               </Button>
             </div>
-          )}
+          ) */}
         </>
       ) : hasSearched ? (
         <Title size="md">Will not found</Title>

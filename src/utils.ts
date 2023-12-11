@@ -1,38 +1,84 @@
 /* eslint-disable prefer-destructuring */
 /* eslint-disable no-param-reassign */
-import { Contract, Interface, ZeroAddress, ethers } from 'ethers'
+import { Contract, ethers } from 'ethers'
 
 import { BaseTransaction, SendTransactionsParams, SendTransactionsResponse } from '@safe-global/safe-apps-sdk'
 import SafeAppsSDK from '@safe-global/safe-apps-sdk/dist/src/sdk'
-import { parse } from 'path'
+import { parse, sep } from 'path'
 import Safe from '@safe-global/protocol-kit'
+import { Interface } from 'ethers/lib/utils'
 import ABI from './abis/mementoMori.json'
-import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, DisplayData } from './types'
-import { MM_ADDRESS } from './constants'
+import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, DisplayData, Forms } from './types'
+import { sepoliaMmAddress } from './constants'
 
 export const encodeTxData = (
-  cooldown: number,
+  cooldown: string,
   native: NativeToken,
   tokens: Token[],
   nfts: NFT[],
   erc1155s: Erc1155[],
   executors: string[],
 ): string => {
-  const dieSmartInterface = new Interface(ABI)
+  const dieSmartInterface = new ethers.utils.Interface(ABI)
   return dieSmartInterface.encodeFunctionData('createWill', [cooldown, native, tokens, nfts, erc1155s, executors])
 }
 
-export const saveWill = async (wills: FormTypes[]): Promise<void> => {
-  for (let i = 0; i < wills.length; i += 1) {
-    const response = fetch('https://iwill-strapi.herokuapp.com/api/wills', {
+export const saveWill = async (data: FormTypes[]): Promise<void> => {
+  console.log('data', data.length)
+  for (let i = 0; i < data.length; i += 1) {
+    const response = fetch('http://localhost:1337/api/wills', {
       method: 'POST',
       headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: wills[i] }),
+      body: JSON.stringify({ data: data[i] }),
+    })
+  }
+}
+export const saveWillHash = async (
+  wills: FormTypes[],
+  sdk: SafeAppsSDK,
+  safe: { safeAddress: any; chainId?: number; threshold?: number; owners?: string[]; isReadOnly?: boolean },
+): Promise<void> => {
+  console.log('hash', wills)
+  const IMementoMori = new ethers.utils.Interface(ABI)
+  const data = IMementoMori.encodeFunctionData('saveWillHash', [wills])
+  const safeSaveWillHashTransaction: BaseTransaction = {
+    to: sepoliaMmAddress,
+    value: '10000000',
+    data,
+  }
+  const params = { safeTxGas: 500000000 }
+  const IisModuleEnabled: Interface = new Interface(['function isModuleEnabled(address module)'])
+  const isModuleEnabledData: string = IisModuleEnabled.encodeFunctionData('isModuleEnabled', [sepoliaMmAddress])
+  const isModuleEnabledParams = {
+    to: safe.safeAddress,
+    data: isModuleEnabledData,
+  }
+  const isEnabledData: string = await sdk.eth.call([isModuleEnabledParams])
+  const isEnabled = isEnabledData !== '0x0000000000000000000000000000000000000000000000000000000000000000'
+  if (isEnabled) {
+    const safeCreateWillTransaction = await sdk.txs.send({
+      txs: [safeSaveWillHashTransaction],
+      params,
+    })
+  } else {
+    const IenableModule: Interface = new Interface(['function enableModule(address module)'])
+
+    const enableModuleData: string = IenableModule.encodeFunctionData('enableModule', [sepoliaMmAddress])
+
+    const safeEnableModuleTransactionData: BaseTransaction = {
+      to: safe.safeAddress,
+      value: '0',
+      data: enableModuleData,
+    }
+
+    const safeSaveWillHaswwhTransaction: SendTransactionsResponse = await sdk.txs.send({
+      txs: [safeSaveWillHashTransaction, safeEnableModuleTransactionData],
+      params,
     })
   }
 }
 
-export const getUserInfo = async (address: string): Promise<UserInfo> => {
+export const getWills = async (address: string): Promise<UserInfo> => {
   const response = await fetch(
     `https://iwill-strapi.herokuapp.com/api/wills?filters[baseAddress][$eq]=${address}&paginationl[start]=0&pagination[limit]=10`,
     {
@@ -44,18 +90,17 @@ export const getUserInfo = async (address: string): Promise<UserInfo> => {
 }
 
 export const formatData = (data: FormTypes, ownerAddress: string): FormTypes => {
-  console.log('sub', data)
   const newData = JSON.parse(JSON.stringify(data))
   const executors = []
   const nativeBeneficiaries = []
   const nativePercentages = []
-  for (let i = 0; i < newData.nativeToken[0].beneficiaries.length; i += 1) {
-    nativeBeneficiaries.push(newData.nativeToken[0].beneficiaries[i].address)
-    nativePercentages.push(Number(newData.nativeToken[0].beneficiaries[i].percentage))
-    executors.push(newData.nativeToken[0].beneficiaries[i].address)
+  for (let i = 0; i < newData.native[0].beneficiaries.length; i += 1) {
+    nativeBeneficiaries.push(newData.native[0].beneficiaries[i].address)
+    nativePercentages.push(newData.native[0].beneficiaries[i].percentage)
+    executors.push(newData.native[0].beneficiaries[i].address)
   }
-  newData.nativeToken[0].beneficiaries = nativeBeneficiaries
-  newData.nativeToken[0].percentages = nativePercentages
+  newData.native[0].beneficiaries = nativeBeneficiaries
+  newData.native[0].percentages = nativePercentages
   if (!newData.tokens[0]) {
     newData.tokens = []
   }
@@ -106,7 +151,7 @@ export const formatData = (data: FormTypes, ownerAddress: string): FormTypes => 
   const uniqueExecutors = [...new Set(executors)]
   uniqueExecutors.push(ownerAddress)
   const filteredExecutors = uniqueExecutors.filter((address) => {
-    return address !== ZeroAddress
+    return address !== ethers.constants.AddressZero
   })
   newData.executors = filteredExecutors
 
@@ -118,15 +163,15 @@ export const createWill = async (
   sdk: SafeAppsSDK,
   safe: { safeAddress: any; chainId?: number; threshold?: number; owners?: string[]; isReadOnly?: boolean },
 ): Promise<boolean> => {
-  const txData = encodeTxData(data.cooldown, data.nativeToken[0], data.tokens, data.nfts, data.erc1155s, data.executors)
+  const txData = encodeTxData(data.cooldown, data.native[0], data.tokens, data.nfts, data.erc1155s, data.executors)
   const createWillTransaction: BaseTransaction = {
-    to: MM_ADDRESS,
+    to: sepoliaMmAddress,
     value: '10000000',
     data: txData,
   }
   const params = { safeTxGas: 500000000 }
   const IisModuleEnabled: Interface = new Interface(['function isModuleEnabled(address module)'])
-  const isModuleEnabledData: string = IisModuleEnabled.encodeFunctionData('isModuleEnabled', [MM_ADDRESS])
+  const isModuleEnabledData: string = IisModuleEnabled.encodeFunctionData('isModuleEnabled', [sepoliaMmAddress])
   const isModuleEnabledParams = {
     to: safe.safeAddress,
     data: isModuleEnabledData,
@@ -141,7 +186,7 @@ export const createWill = async (
   } else {
     const IenableModule: Interface = new Interface(['function enableModule(address module)'])
 
-    const enableModuleData: string = IenableModule.encodeFunctionData('enableModule', [MM_ADDRESS])
+    const enableModuleData: string = IenableModule.encodeFunctionData('enableModule', [sepoliaMmAddress])
 
     const safeEnableModuleTransactionData: BaseTransaction = {
       to: safe.safeAddress,
@@ -163,7 +208,7 @@ export const getWill = async (address: string, sdk: SafeAppsSDK): Promise<Displa
   const getWillData: string = dieSmartInterface.encodeFunctionData('getWill', [address])
 
   const getWillTransaction = {
-    to: MM_ADDRESS,
+    to: sepoliaMmAddress,
     data: getWillData,
   }
   const data = await sdk.eth.call([getWillTransaction])
@@ -215,7 +260,7 @@ export const getWill = async (address: string, sdk: SafeAppsSDK): Promise<Displa
       const erc1155 = { contractAddress: '', tokenId: null, beneficiaries: [] }
 
       erc1155.contractAddress = erc1155s[i][0]
-      if (erc1155.contractAddress === ZeroAddress) break
+      if (erc1155.contractAddress === ethers.constants.AddressZero) break
       erc1155.tokenId = Number(erc1155s[i][1])
       for (let j = 0; j < erc1155s[i][2].length; j += 1) {
         const erc1155Beneficiary = { address: '', percentage: null }
@@ -240,31 +285,33 @@ export const getWill = async (address: string, sdk: SafeAppsSDK): Promise<Displa
   }
 }
 
-export const executeWill = async (sdk: SafeAppsSDK, ownerAddress: string): Promise<void> => {
+export const executeWill = async (sdk: SafeAppsSDK, wills: FormTypes[]): Promise<string> => {
   const mmInterface: Interface = new Interface(ABI)
-  const executeData: string = mmInterface.encodeFunctionData('execute', [ownerAddress, 50000000000])
+  const executeData: string = mmInterface.encodeFunctionData('execute', [wills])
   const executeWillTransaction: BaseTransaction = {
-    to: MM_ADDRESS,
+    to: sepoliaMmAddress,
     value: '0',
     data: executeData,
   }
 
-  await sdk.txs.send({
+  const response = await sdk.txs.send({
     txs: [executeWillTransaction],
   })
+  const hash = response.safeTxHash
+  return hash
 }
 
 export const executeWillByOwner = async (sdk: SafeAppsSDK, ownerAddress: any): Promise<void> => {
   const mmInterface: Interface = new Interface(ABI)
   const executeData: string = mmInterface.encodeFunctionData('execute', [ownerAddress, 500000000])
   const executeWillTransaction: BaseTransaction = {
-    to: MM_ADDRESS,
+    to: sepoliaMmAddress,
     value: '0',
     data: executeData,
   }
   const requestData: string = mmInterface.encodeFunctionData('requestExecution', [ownerAddress])
   const requestTransaction: BaseTransaction = {
-    to: MM_ADDRESS,
+    to: sepoliaMmAddress,
     value: '0',
     data: requestData,
   }
@@ -278,7 +325,7 @@ export const deleteWill = async (sdk: SafeAppsSDK): Promise<void> => {
   const mmInterface = new Interface(ABI)
   const executeData = mmInterface.encodeFunctionData('deleteWill')
   const executeWillTransaction: BaseTransaction = {
-    to: MM_ADDRESS,
+    to: sepoliaMmAddress,
     value: '0',
     data: executeData,
   }
@@ -292,7 +339,7 @@ export const requestExecution = async (owner: string, sdk: SafeAppsSDK): Promise
   const mmInterface: Interface = new Interface(ABI)
   const requestData: string = mmInterface.encodeFunctionData('requestExecution', [owner])
   const requestTransaction: BaseTransaction = {
-    to: MM_ADDRESS,
+    to: sepoliaMmAddress,
     value: '0',
     data: requestData,
   }
@@ -305,7 +352,7 @@ export const cancelExecution = async (sdk: SafeAppsSDK): Promise<void> => {
   const mmInterface = new Interface(ABI)
   const cancelData: string = mmInterface.encodeFunctionData('cancelExecution')
   const cancelTransaction: BaseTransaction = {
-    to: MM_ADDRESS,
+    to: sepoliaMmAddress,
     value: '0',
     data: cancelData,
   }
@@ -327,6 +374,6 @@ export const getIsExecutor = (
   }
   return false
 }
-export const getExecTime = (data: DisplayData): number => {
+export const getExecTime = (data: FormTypes): number => {
   return Number(data.requestTime) + Number(data.cooldown)
 }
