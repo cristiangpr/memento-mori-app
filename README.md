@@ -2,48 +2,18 @@
 
 
 
-Memento Mori is a dapp that lets you create a will for your Safe wallet. Yo may designate beneficiaries for your native, ERC20, ERC7721 and ERC1155 tokens and assign a percentage to each of them. Upon your death beneficiaries may request execution. If you do not cancel execution before the cooldown period is over beneficiaries may execute the will and receive their assets.
+Memento Mori is a dapp that lets you create a will for your Safe wallet. You may designate beneficiaries for your native, ERC20, ERC7721 and ERC1155 tokens and assign a percentage to each of them. Upon your death beneficiaries may request execution. If you do not cancel execution before the cooldown period is over beneficiaries may execute the will and receive their assets.
 
-```
-yarn install
-cp .env.sample .env
-yarn start
-```
 
-Then:
 
-- If HTTPS is used (by default enabled)
-  - Open your Safe app locally (by default via https://localhost:3000/) and accept the SSL error.
-- Go to the [Safe web interface](https://app.gnosis-safe.io)
-- Create your test safe
-- Go to Apps -> Manage Apps -> Add Custom App
-- Paste your localhost URL, default is https://localhost:3000/
-- You should see Safe App Starter as a new app
-- Develop your app from there
+## Demo
 
-## Features
+To try out a demo of the dapp follow these instructions.
+1. Make sure your wallet is connected to the Sepolia network.
+2. Go to <https://app.safe.global/>.
+3. If you don't already have one create a Safe on Sepolia and Base Goerli.
+4. Transfer assets to your Safe.
+5. In the Safe UI go to Apps and select My custom apps.
+6. Click Add custom Safe App, paste this url https://memento-mori-app-ac0b3286114c.herokuapp.com/ in the Safe App URL field and click Add.
+7. You may now try out Memento Mori. 
 
-Gnosis Safe App Starter combines recommendations described in the following repositories:
-
-- [Safe Apps SDK](https://github.com/gnosis/safe-apps-sdk)
-- [safe-react-components](https://github.com/gnosis/safe-react-components)
-
-You can use the `useSafe` React hook to interact with the Safe Apps SDK
-
-```
-const safe = useSafe();
-console.log(safe.info);
-```
-
-Safe React Components are also integrated and ready to use. [See all components](https://components.gnosis-safe.io/).
-
-## Dependencies
-
-### Included
-- [`@gnosis.pm/safe-react-components`](https://github.com/gnosis/safe-react-components) (UI components themed for the Safe interface)
-- [`@rmeissner/safe-apps-react-sdk`](https://github.com/rmeissner/safe-sdks-js/tree/master/safe-apps-react-sdk) (React hook for the Safe Apps SDK)
-
-### Recommended
-- [`ethers`](https://github.com/ethers-io/ethers.js) (Library for interacting with Ethereum)
-- [`web3`](https://github.com/ethereum/web3.js/) (Library for interacting with Ethereum)
-- [`@studydefi/money-legos`](https://github.com/studydefi/money-legos) (Library for DeFi interactions)
