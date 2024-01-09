@@ -1,12 +1,12 @@
 {
-  "name": "die-smart-app",
+  "name": "memento-mori-app",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "dependencies": {
     "@gnosis.pm/safe-apps-sdk": "^7.8.0",
     "@gnosis.pm/safe-react-components": "^1.2.0",
     "@material-ui/core": "^4.12.4",
-    "@safe-global/protocol-kit": "^1.2.0",
+    "@safe-global/protocol-kit": "^1.3.0",
     "@safe-global/safe-apps-react-sdk": "^4.6.7",
     "@safe-global/safe-apps-sdk": "^8.0.0",
     "@safe-global/safe-core-sdk-types": "^2.2.0",

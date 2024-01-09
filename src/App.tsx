@@ -3,17 +3,18 @@ import React, { FormEvent, useState } from 'react'
 import styled from 'styled-components'
 import { Title, TextField, Button, TextFieldInput } from '@gnosis.pm/safe-react-components'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
-import { ZeroAddress } from 'ethers'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { useSafeBalances } from './hooks/useSafeBalances'
 import BalancesTable from './components/BalancesTable'
 import { Form, FormTypes } from './types'
-import { createWill } from './utils'
+
 // eslint-disable-next-line import/no-cycle
 import BeneficiaryFields from './components/BeneficiaryFields'
 import Navbar from './components/Navbar'
+
 import MyWill from './components/MyWill'
 import Execute from './components/Execute'
+import MyWills from './components/MyWills'
 
 const Container = styled.div`
   padding: 1rem;
@@ -68,7 +69,7 @@ function SafeApp(): React.ReactElement {
     <BrowserRouter>
       <Navbar />
       <Routes>
-        <Route path="/" element={<MyWill />} />
+        <Route path="/" element={<MyWills />} />
 
         <Route path="/execute" element={<Execute />} />
       </Routes>

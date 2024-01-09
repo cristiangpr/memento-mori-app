@@ -41,32 +41,55 @@ export type UserInfo = {
   birthDate?: string
   address?: string
 }
+export interface Forms {
+  wills: FormTypes[]
+}
 
 export enum Form {
+  IsActive = 'isActive',
+  RequestTime = 'requestTime',
   Cooldown = 'cooldown',
-  NativeToken = 'nativeToken',
+  Native = 'native',
   Tokens = 'tokens',
   NFTS = 'nfts',
   Erc1155s = 'erc1155s',
   Executors = 'executors',
+  ChainSelector = 'chainSelector',
+  Safe = 'safe',
+  BaseAddress = 'baseAddress',
+  XChainAddress = 'xChainAddress',
+  Executed = 'executed',
+  Id = 'id',
 }
 
 export interface FormTypes {
-  [Form.Cooldown]: number
-  [Form.NativeToken]: NativeToken[]
+  [Form.IsActive]: boolean
+  [Form.RequestTime]: string
+  [Form.Cooldown]: string
+  [Form.Native]: NativeToken[]
   [Form.Erc1155s]: Erc1155[]
   [Form.Tokens]: Token[]
   [Form.NFTS]: NFT[]
   [Form.Executors]: string[]
+  [Form.ChainSelector]: string
+  [Form.Safe]: string
+  [Form.BaseAddress]: string
+  [Form.XChainAddress]: string
+  [Form.Executed]: boolean
+  [Form.Id]?: number
 }
 
-export type DisplayData = {
+export type ContractWill = {
   isActive: boolean
-  requestTime: number
-  cooldown: number
-  nativeToken: NativeToken
-  tokens?: Token[]
-  nfts?: NFT[]
-  erc1155s?: Erc1155[]
+  requestTime: string
+  cooldown: string
+  native: NativeToken[]
+  tokens: Token[]
+  nfts: NFT[]
+  erc1155s: Erc1155[]
   executors: string[]
+  chainSelector: string
+  safe: string
+  xChainAddress: string
+  baseAddress: string
 }
