@@ -11,6 +11,7 @@ import { Form, FormTypes } from './types'
 // eslint-disable-next-line import/no-cycle
 import BeneficiaryFields from './components/BeneficiaryFields'
 import Navbar from './components/Navbar'
+
 import MyWill from './components/MyWill'
 import Execute from './components/Execute'
 import MyWills from './components/MyWills'

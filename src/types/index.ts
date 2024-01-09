@@ -58,6 +58,8 @@ export enum Form {
   Safe = 'safe',
   BaseAddress = 'baseAddress',
   XChainAddress = 'xChainAddress',
+  Executed = 'executed',
+  Id = 'id',
 }
 
 export interface FormTypes {
@@ -73,15 +75,21 @@ export interface FormTypes {
   [Form.Safe]: string
   [Form.BaseAddress]: string
   [Form.XChainAddress]: string
+  [Form.Executed]: boolean
+  [Form.Id]?: number
 }
 
-export type DisplayData = {
+export type ContractWill = {
   isActive: boolean
-  requestTime: number
-  cooldown: number
-  nativeToken: NativeToken
-  tokens?: Token[]
-  nfts?: NFT[]
-  erc1155s?: Erc1155[]
+  requestTime: string
+  cooldown: string
+  native: NativeToken[]
+  tokens: Token[]
+  nfts: NFT[]
+  erc1155s: Erc1155[]
   executors: string[]
+  chainSelector: string
+  safe: string
+  xChainAddress: string
+  baseAddress: string
 }

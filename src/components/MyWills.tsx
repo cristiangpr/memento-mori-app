@@ -19,12 +19,13 @@ import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import { BaseContract, Contract, ethers, getAddress, getDefaultProvider, JsonRpcProvider } from 'ethers'
 import { useSafeBalances } from '../hooks/useSafeBalances'
 import BalancesTable from './BalancesTable'
-import { DisplayData, Form, FormTypes, Forms } from '../types'
+import { ContractWill, Form, FormTypes, Forms } from '../types'
 import {
   cancelExecution,
   deleteWill,
   executeWill,
-  formatData,
+  formatDataForApi,
+  formatDataForContract,
   getDisplayData,
   getExecTime,
   getWills,
@@ -35,7 +36,7 @@ import {
 import { Container, Row, LeftColumn, RightColumn, WillForm } from './FormElements'
 // eslint-disable-next-line import/no-cycle
 import BeneficiaryFields from './BeneficiaryFields'
-import { baseGMmAddressMmAddress, sepoliaChainSelector, sepoliaMmAddress } from '../constants'
+import { baseGChainSelector, baseGMmAddress, sepoliaChainSelector, sepoliaMmAddress } from '../constants'
 import ABI from '../abis/mementoMori.json'
 import { validateDuplicates, validateFieldsSum } from '../validation'
 import MyWill from './MyWill'
@@ -72,7 +73,7 @@ function MyWills(): React.ReactElement {
         {
           [Form.Cooldown]: '',
           [Form.IsActive]: false,
-          [Form.RequestTime]: '',
+          [Form.RequestTime]: '0',
 
           [Form.Native]: [
             {
@@ -87,6 +88,7 @@ function MyWills(): React.ReactElement {
           [Form.Safe]: safe.safeAddress,
           [Form.BaseAddress]: safe.safeAddress,
           [Form.XChainAddress]: safe.safeAddress,
+          [Form.Executed]: false,
         },
       ],
     },
@@ -103,26 +105,26 @@ function MyWills(): React.ReactElement {
   useEffect(() => {
     const loadData = async () => {
       const data = await getWills(safe.safeAddress)
-
-      const display = getDisplayData(data)
-      setDisplayData(display)
-      setHasWill(true)
-      /*   if (displayData && displayData.executors.length > 0) {
+      console.log('data', data)
+      if (data.length > 0) {
+        const display = getDisplayData(data)
+        setDisplayData(display)
         setHasWill(true)
-      }
-      if (displayData && displayData.isActive) {
-        setExecTime(getExecTime(displayData))
-        if (getExecTime(displayData) <= Date.now()) {
-          setIsExecutable(true)
+
+        if (displayData && displayData[0].isActive) {
+          setExecTime(getExecTime(displayData[0]))
+          if (getExecTime(displayData[0]) <= Date.now()) {
+            setIsExecutable(true)
+          }
         }
-      } */
+      }
     }
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => {
     if (hasWill && displayData) {
-      console.log('display', displayData.length)
+      console.log('display', displayData)
       reset({
         wills: [
           {
@@ -139,6 +141,8 @@ function MyWills(): React.ReactElement {
             [Form.Safe]: safe.safeAddress,
             [Form.BaseAddress]: safe.safeAddress,
             [Form.XChainAddress]: safe.safeAddress,
+            [Form.Executed]: displayData[0].executed,
+            [Form.Id]: displayData[0].id,
           },
         ],
       })
@@ -161,6 +165,8 @@ function MyWills(): React.ReactElement {
             [Form.Safe]: displayData[i].safe,
             [Form.BaseAddress]: displayData[i].baseAddress,
             [Form.XChainAddress]: displayData[i].xChainAddress,
+            [Form.Executed]: displayData[i].executed,
+            [Form.Id]: displayData[i].id,
           })
         }
       }
@@ -177,15 +183,18 @@ function MyWills(): React.ReactElement {
     const validated = validateDuplicates(data.wills, setError)
 
     if (validated && sumValidated) {
-      const formattedData = []
+      const apiData = []
+      const contractData = []
       for (let i = 0; i < data.wills.length; i += 1) {
-        const formattedWill = formatData(data.wills[i], safe.safeAddress)
-        formattedData.push(formattedWill)
+        const apiWill = formatDataForApi(data.wills[i], safe.safeAddress)
+        apiData.push(apiWill)
+        const contractWill = formatDataForContract(data.wills[i], safe.safeAddress)
+        contractData.push(contractWill)
       }
 
-      await saveWill(formattedData)
+      await saveWill(apiData)
 
-      await saveWillHash(formattedData, sdk, safe)
+      await saveWillHash(contractData, sdk, safe)
 
       contract.on('WillCreated', (ownerAddress) => {
         if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
@@ -240,7 +249,7 @@ function MyWills(): React.ReactElement {
     setIsExecuteOpen(true)
     const formattedData = []
     for (let i = 0; i < displayData.length; i += 1) {
-      const formattedWill = formatData(displayData[i], safe.safeAddress)
+      const formattedWill = formatDataForContract(displayData[i], safe.safeAddress)
       formattedData.push(formattedWill)
     }
 
@@ -412,22 +421,20 @@ function MyWills(): React.ReactElement {
             color="secondary"
             onClick={() =>
               appendWill({
-                cooldown: '',
-                isActive: false,
-                requestTime: '',
-                native: [
-                  {
-                    beneficiaries: [{ address: '', percentage: null }],
-                  },
-                ],
-                tokens: [],
-                nfts: [],
-                erc1155s: [],
-                executors: [],
-                chainSelector: '',
-                safe: '',
-                baseAddress: safe.safeAddress,
-                xChainAddress: baseGMmAddressMmAddress,
+                [Form.Cooldown]: '0',
+                [Form.IsActive]: false,
+                [Form.RequestTime]: '0',
+
+                [Form.Native]: displayData[0].native,
+                [Form.Executors]: [],
+                [Form.Tokens]: [],
+                [Form.NFTS]: [],
+                [Form.Erc1155s]: [],
+                [Form.ChainSelector]: baseGChainSelector,
+                [Form.Safe]: '',
+                [Form.BaseAddress]: safe.safeAddress,
+                [Form.XChainAddress]: baseGMmAddress,
+                [Form.Executed]: false,
               })
             }
           >

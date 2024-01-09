@@ -9,13 +9,13 @@ import SafeAppsSDK from '@safe-global/safe-apps-sdk/dist/src/sdk'
 import { parse, sep } from 'path'
 import Safe from '@safe-global/protocol-kit'
 import ABI from './abis/mementoMori.json'
-import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, DisplayData, Forms, Form } from './types'
-import { devUrl, sepoliaMmAddress } from './constants'
+import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, Forms, Form, ContractWill } from './types'
+import { prodUrl, sepoliaMmAddress } from './constants'
 
 export const saveWill = async (data: FormTypes[]): Promise<void> => {
   for (let i = 0; i < data.length; i += 1) {
     const res = await fetch(
-      `${devUrl}?filters[baseAddress][$eq]=${data[i].baseAddress}&filters[chainSelector][$eq]=${data[i].chainSelector}`,
+      `${prodUrl}?filters[baseAddress][$eq]=${data[i].baseAddress}&filters[chainSelector][$eq]=${data[i].chainSelector}`,
       {
         method: 'GET',
         headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
@@ -24,13 +24,13 @@ export const saveWill = async (data: FormTypes[]): Promise<void> => {
     const check = await res.json()
     console.log(check)
     if (check.data.length > 0) {
-      fetch(`${devUrl}/${check.data[0].id}`, {
+      fetch(`${prodUrl}/${check.data[0].id}`, {
         method: 'PUT',
         headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: data[i] }),
       })
     } else {
-      fetch(devUrl, {
+      fetch(prodUrl, {
         method: 'POST',
         headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: data[i] }),
@@ -39,7 +39,7 @@ export const saveWill = async (data: FormTypes[]): Promise<void> => {
   }
 }
 export const saveWillHash = async (
-  wills: FormTypes[],
+  wills: ContractWill[],
   sdk: SafeAppsSDK,
   safe: { safeAddress: any; chainId?: number; threshold?: number; owners?: string[]; isReadOnly?: boolean },
 ): Promise<void> => {
@@ -83,8 +83,8 @@ export const saveWillHash = async (
   }
 }
 
-export const getWills = async (address: string): Promise<Forms> => {
-  const response = await fetch(`${devUrl}?filters[baseAddress][$eq]=${address}&sort=id`, {
+export const getWills = async (address: string): Promise<any[]> => {
+  const response = await fetch(`${prodUrl}?filters[baseAddress][$eq]=${address}&sort=id`, {
     method: 'GET',
     headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
   })
@@ -92,7 +92,7 @@ export const getWills = async (address: string): Promise<Forms> => {
   return result.data
 }
 
-export const formatData = (data: FormTypes, ownerAddress: string): FormTypes => {
+export const formatDataForApi = (data: FormTypes, ownerAddress: string): FormTypes => {
   const newData = JSON.parse(JSON.stringify(data))
   const executors = []
   const nativeBeneficiaries = []
@@ -161,7 +161,78 @@ export const formatData = (data: FormTypes, ownerAddress: string): FormTypes => 
   return newData
 }
 
-export const getDisplayData = (data: any): FormTypes[] => {
+export const formatDataForContract = (data: FormTypes, ownerAddress: string): ContractWill => {
+  const newData = JSON.parse(JSON.stringify(data))
+  const executors = []
+  const nativeBeneficiaries = []
+  const nativePercentages = []
+  for (let i = 0; i < newData.native[0].beneficiaries.length; i += 1) {
+    nativeBeneficiaries.push(newData.native[0].beneficiaries[i].address)
+    nativePercentages.push(newData.native[0].beneficiaries[i].percentage)
+    executors.push(newData.native[0].beneficiaries[i].address)
+  }
+  newData.native[0].beneficiaries = nativeBeneficiaries
+  newData.native[0].percentages = nativePercentages
+  if (!newData.tokens[0]) {
+    newData.tokens = []
+  }
+  for (let i = 0; i < newData.tokens.length; i += 1) {
+    const tokenBeneficiaries = []
+    const tokenPercentages = []
+    for (let j = 0; j < newData.tokens[i].beneficiaries.length; j += 1) {
+      tokenBeneficiaries.push(newData.tokens[i].beneficiaries[j].address)
+      tokenPercentages.push(newData.tokens[i].beneficiaries[j].percentage)
+      executors.push(newData.tokens[i].beneficiaries[j].address)
+    }
+    newData.tokens[i].beneficiaries = tokenBeneficiaries
+
+    newData.tokens[i].percentages = tokenPercentages
+  }
+
+  if (!newData.nfts[0]) {
+    newData.nfts = []
+  }
+  for (let i = 0; i < newData.nfts.length; i += 1) {
+    const nftBeneficiaries = []
+    const nftIds = []
+    for (let j = 0; j < newData.nfts[i].beneficiaries.length; j += 1) {
+      nftBeneficiaries.push(newData.nfts[i].beneficiaries[j].beneficiary)
+      executors.push(newData.nfts[i].beneficiaries[j].beneficiary)
+
+      nftIds.push(newData.nfts[i].beneficiaries[j].tokenId)
+    }
+    newData.nfts[i].beneficiaries = nftBeneficiaries
+
+    newData.nfts[i].tokenIds = nftIds
+  }
+  if (!newData.erc1155s[0]) {
+    newData.erc1155s = []
+  }
+  for (let i = 0; i < newData.erc1155s.length; i += 1) {
+    const erc1155Beneficiaries = []
+    const erc1155Percentages = []
+    for (let j = 0; j < newData.erc1155s[i].beneficiaries.length; j += 1) {
+      erc1155Beneficiaries.push(newData.erc1155s[i].beneficiaries[j].address)
+      erc1155Percentages.push(newData.erc1155s[i].beneficiaries[j].percentage)
+      executors.push(newData.erc1155s[i].beneficiaries[j].address)
+    }
+    newData.erc1155s[i].beneficiaries = erc1155Beneficiaries
+
+    newData.erc1155s[i].percentages = erc1155Percentages
+  }
+  const uniqueExecutors = [...new Set(executors)]
+  uniqueExecutors.push(ownerAddress)
+  const filteredExecutors = uniqueExecutors.filter((address) => {
+    return address !== ZeroAddress
+  })
+  newData.executors = filteredExecutors
+  delete newData.executed
+  delete newData.id
+
+  return newData
+}
+
+export const getDisplayData = (data: any[]): FormTypes[] => {
   const result = []
   for (let h = 0; h < data.length; h += 1) {
     let {
@@ -177,7 +248,9 @@ export const getDisplayData = (data: any): FormTypes[] => {
       chainSelector,
       xChainAddress,
       safe,
+      executed,
     } = data[h].attributes
+    const id = data[h]
 
     const nativeBeneficiaries = []
     for (let i = 0; i < native[0].beneficiaries.length; i += 1) {
@@ -238,7 +311,7 @@ export const getDisplayData = (data: any): FormTypes[] => {
       isActive,
       cooldown,
       requestTime,
-
+      id,
       tokens: tokensArr,
       nfts: nftsArr,
       erc1155s: erc1155sArr,
@@ -248,6 +321,7 @@ export const getDisplayData = (data: any): FormTypes[] => {
       xChainAddress,
       safe,
       native: [{ beneficiaries: nativeBeneficiaries }],
+      executed,
     }
     result.push(will)
   }
@@ -265,6 +339,7 @@ export const executeWill = async (sdk: SafeAppsSDK, wills: FormTypes[]): Promise
 
   const response = await sdk.txs.send({
     txs: [executeWillTransaction],
+    params: { safeTxGas: 500000000 },
   })
   const hash = response.safeTxHash
   return hash
@@ -285,7 +360,7 @@ export const deleteWill = async (sdk: SafeAppsSDK): Promise<void> => {
 }
 
 export const requestExecution = async (owner: string, safe): Promise<boolean> => {
-  const response = await fetch(`${devUrl}?filters[baseAddress][$eq]=${owner}&sort=id`, {
+  const response = await fetch(`${prodUrl}?filters[baseAddress][$eq]=${owner}&sort=id`, {
     method: 'GET',
     headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
   })
@@ -293,7 +368,7 @@ export const requestExecution = async (owner: string, safe): Promise<boolean> =>
   if (result.data.length > 0) {
     for (let i = 0; i < result.data[0].attributes.executors.length; i += 1) {
       if (result.data[0].attributes.executors[i] === safe.safeAddress) {
-        fetch(`${devUrl}/${result.data[0].id}`, {
+        fetch(`${prodUrl}/${result.data[0].id}`, {
           method: 'PUT',
           headers: {
             Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`,
@@ -309,14 +384,14 @@ export const requestExecution = async (owner: string, safe): Promise<boolean> =>
 }
 
 export const cancelExecution = async (safe): Promise<boolean> => {
-  const response = await fetch(`${devUrl}?filters[baseAddress][$eq]=${safe}&sort=id`, {
+  const response = await fetch(`${prodUrl}?filters[baseAddress][$eq]=${safe}&sort=id`, {
     method: 'GET',
     headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
   })
   const result = await response.json()
   if (result.data.length > 0) {
     if (result.data[0].attributes.baseAddress === safe.safeAddress) {
-      fetch(`${devUrl}/${result.data[0].id}`, {
+      fetch(`${prodUrl}/${result.data[0].id}`, {
         method: 'PUT',
         headers: {
           Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`,

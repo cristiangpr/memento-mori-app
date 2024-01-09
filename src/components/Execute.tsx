@@ -5,7 +5,8 @@ import { Title, Button, TextFieldInput, GenericModal, Loader, Dot, Icon } from '
 import { BaseContract, ethers, JsonRpcProvider } from 'ethers'
 import {
   executeWill,
-  formatData,
+  formatDataForContract,
+  formatDataForApi,
   getDisplayData,
   getExecTime,
   getIsExecutor,
@@ -13,7 +14,7 @@ import {
   requestExecution,
   saveWillHash,
 } from '../utils'
-import { DisplayData, FormTypes, Forms } from '../types'
+import { FormTypes, Forms } from '../types'
 import { Container, LeftColumn, RightColumn, Row, Will, WillForm } from './FormElements'
 import { sepoliaMmAddress } from '../constants'
 import ABI from '../abis/mementoMori.json'
@@ -43,12 +44,14 @@ function Execute(): React.ReactElement {
     setSuccess(false)
     setIsRequestOpen(true)
     await requestExecution(ownerAddress, safe)
-    await loadData()
+    const data = await getWills(ownerAddress)
+    const display = getDisplayData(data)
     const formattedData = []
-    for (let i = 0; i < displayData.length; i += 1) {
-      const formattedWill = formatData(displayData[i], safe.safeAddress)
+    for (let i = 0; i < display.length; i += 1) {
+      const formattedWill = formatDataForContract(display[i], safe.safeAddress)
       formattedData.push(formattedWill)
     }
+    console.log('request', formattedData)
     await saveWillHash(formattedData, sdk, safe)
 
     contract.on('WillCreated', (address) => {
@@ -65,9 +68,10 @@ function Execute(): React.ReactElement {
     setIsExecuteOpen(true)
     const formattedData = []
     for (let i = 0; i < displayData.length; i += 1) {
-      const formattedWill = formatData(displayData[i], safe.safeAddress)
+      const formattedWill = formatDataForContract(displayData[i], safe.safeAddress)
       formattedData.push(formattedWill)
     }
+    console.log('exec', formattedData)
 
     await executeWill(sdk, formattedData)
 
