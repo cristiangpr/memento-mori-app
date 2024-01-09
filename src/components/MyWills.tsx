@@ -16,18 +16,18 @@ import {
 } from '@gnosis.pm/safe-react-components'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
-import { BaseContract, Contract, ethers, getDefaultProvider } from 'ethers'
+import { BaseContract, Contract, ethers, getAddress, getDefaultProvider, JsonRpcProvider } from 'ethers'
 import { useSafeBalances } from '../hooks/useSafeBalances'
 import BalancesTable from './BalancesTable'
 import { DisplayData, Form, FormTypes, Forms } from '../types'
 import {
   cancelExecution,
-  createWill,
   deleteWill,
   executeWill,
   formatData,
+  getDisplayData,
   getExecTime,
-  getWill,
+  getWills,
   requestExecution,
   saveWill,
   saveWillHash,
@@ -43,7 +43,7 @@ import MyWill from './MyWill'
 function MyWills(): React.ReactElement {
   const { sdk, safe } = useSafeAppsSDK()
   const [balances] = useSafeBalances(sdk)
-  const [displayData, setDisplayData] = useState<DisplayData>()
+  const [displayData, setDisplayData] = useState<FormTypes[]>()
   const [isExecutable, setIsExecutable] = useState<boolean>(false)
   const [execTime, setExecTime] = useState<number>()
   const [hasWill, setHasWill] = useState<boolean>(false)
@@ -71,18 +71,18 @@ function MyWills(): React.ReactElement {
       wills: [
         {
           [Form.Cooldown]: '',
-          [Form.IsActive]: true,
-          [Form.RequestTime]: Math.floor(Date.now() / 1000).toString(),
+          [Form.IsActive]: false,
+          [Form.RequestTime]: '',
 
-          [Form.NativeToken]: [
+          [Form.Native]: [
             {
               beneficiaries: [{ address: '', percentage: null }],
             },
           ],
 
-          [Form.Tokens]: displayData ? displayData.tokens : [],
-          [Form.NFTS]: displayData ? displayData.nfts : [],
-          [Form.Erc1155s]: displayData ? displayData.erc1155s : [],
+          [Form.Tokens]: [],
+          [Form.NFTS]: [],
+          [Form.Erc1155s]: [],
           [Form.ChainSelector]: sepoliaChainSelector,
           [Form.Safe]: safe.safeAddress,
           [Form.BaseAddress]: safe.safeAddress,
@@ -91,43 +91,6 @@ function MyWills(): React.ReactElement {
       ],
     },
   })
-  useEffect(() => {
-    if (mm && mm[0].isActive) {
-      setExecTime(getExecTime(mm[0]))
-      if (getExecTime(mm[0]) <= Date.now()) {
-        setIsExecutable(true)
-      }
-    }
-  }, [mm, safe, sdk])
-  /* useEffect(() => {
-    const loadData = async () => {
-      const data = await getWill(safe.safeAddress, sdk)
-      setDisplayData(data)
-      if (displayData && displayData.executors.length > 0) {
-        setHasWill(true)
-      }
-      if (displayData && displayData.isActive) {
-        setExecTime(getExecTime(displayData))
-        if (getExecTime(displayData) <= Date.now()) {
-          setIsExecutable(true)
-        }
-      }
-    }
-    loadData()
-  }, [displayData, safe, sdk])
-  useEffect(() => {
-    if (hasWill) {
-      reset({
-        cooldown: Number(displayData.cooldown),
-        nativeToken: [displayData.nativeToken],
-        tokens: displayData.tokens,
-        nfts: displayData.nfts,
-        erc1155s: displayData.erc1155s,
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reset, hasWill]) */
-
   const {
     fields: willFields,
     append: appendWill,
@@ -137,10 +100,81 @@ function MyWills(): React.ReactElement {
     name: 'wills',
   })
 
+  useEffect(() => {
+    const loadData = async () => {
+      const data = await getWills(safe.safeAddress)
+
+      const display = getDisplayData(data)
+      setDisplayData(display)
+      setHasWill(true)
+      /*   if (displayData && displayData.executors.length > 0) {
+        setHasWill(true)
+      }
+      if (displayData && displayData.isActive) {
+        setExecTime(getExecTime(displayData))
+        if (getExecTime(displayData) <= Date.now()) {
+          setIsExecutable(true)
+        }
+      } */
+    }
+    loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    if (hasWill && displayData) {
+      console.log('display', displayData.length)
+      reset({
+        wills: [
+          {
+            [Form.Cooldown]: displayData[0].cooldown,
+            [Form.IsActive]: displayData[0].isActive,
+            [Form.RequestTime]: displayData[0].requestTime,
+
+            [Form.Native]: displayData[0].native,
+            [Form.Executors]: displayData[0].executors,
+            [Form.Tokens]: displayData[0].tokens,
+            [Form.NFTS]: displayData[0].nfts,
+            [Form.Erc1155s]: displayData[0].erc1155s,
+            [Form.ChainSelector]: sepoliaChainSelector,
+            [Form.Safe]: safe.safeAddress,
+            [Form.BaseAddress]: safe.safeAddress,
+            [Form.XChainAddress]: safe.safeAddress,
+          },
+        ],
+      })
+
+      if (displayData && displayData.length > 1) {
+        console.log('length', displayData.length)
+        for (let i = 1; i < displayData.length; i += 1) {
+          console.log('i', displayData[i])
+          appendWill({
+            [Form.Cooldown]: displayData[i].cooldown,
+            [Form.IsActive]: displayData[i].isActive,
+            [Form.RequestTime]: displayData[i].requestTime,
+            [Form.Executors]: displayData[i].executors,
+            [Form.Native]: displayData[i].native,
+
+            [Form.Tokens]: displayData[i].tokens,
+            [Form.NFTS]: displayData[i].nfts,
+            [Form.Erc1155s]: displayData[i].erc1155s,
+            [Form.ChainSelector]: displayData[i].chainSelector,
+            [Form.Safe]: displayData[i].safe,
+            [Form.BaseAddress]: displayData[i].baseAddress,
+            [Form.XChainAddress]: displayData[i].xChainAddress,
+          })
+        }
+      }
+    }
+  }, [reset, hasWill, displayData, safe.safeAddress, appendWill])
+
   const onSubmit = async (data: Forms): Promise<void> => {
+    setSuccess(false)
+    setIsCreateOpen(true)
     console.log('url', process.env.REACT_APP_RPC_URL)
-    const sumValidated = true // await validateFieldsSum(data, setError)
-    const validated = true // await validateDuplicates(data, setError)
+    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
+    const sumValidated = validateFieldsSum(data.wills, setError)
+    const validated = validateDuplicates(data.wills, setError)
 
     if (validated && sumValidated) {
       const formattedData = []
@@ -150,37 +184,22 @@ function MyWills(): React.ReactElement {
       }
 
       await saveWill(formattedData)
-      await saveWillHash(formattedData, sdk, safe)
-      setMm(formattedData)
 
-      /*   const provider = new ethers.providers.JsonRpcProvider(process.env.REACT_APP_RPC_URL)
-      const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
+      await saveWillHash(formattedData, sdk, safe)
 
       contract.on('WillCreated', (ownerAddress) => {
-        if (ethers.utils.getAddress(ownerAddress) === ethers.utils.getAddress(safe.safeAddress)) {
+        if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
           setSuccess(true)
-          setIsCreateOpen(false)
-          /* reset({
-            wills: [
-              {
-                cooldown: Number(displayData.cooldown),
-                nativeToken: [displayData.nativeToken],
-                tokens: displayData.tokens,
-                nfts: displayData.nfts,
-                erc1155s: displayData.erc1155s,
-              },
-            ],
-          }) 
-        } 
-    
-      }) */
+          setIsCreateOpen(true)
+        }
+      })
     }
   }
   const handleDelete = async (): Promise<void> => {
     setSuccess(false)
     setIsDeleteOpen(true)
     await deleteWill(sdk)
-    const provider = new ethers.providers.JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     contract.on('WillDeleted', (ownerAddress) => {
       if (ownerAddress === safe.safeAddress) {
@@ -200,24 +219,12 @@ function MyWills(): React.ReactElement {
       }
     })
   }
-  const handleRequest = async (): Promise<void> => {
-    setSuccess(false)
-    setIsRequestOpen(true)
-    await requestExecution(safe.safeAddress, sdk)
-    const provider = new ethers.providers.JsonRpcProvider(process.env.REACT_APP_RPC_URL)
-    const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
-    contract.on('ExecutionRequested', (ownerAddress) => {
-      if (ownerAddress === safe.safeAddress) {
-        setSuccess(true)
-        setIsRequestOpen(true)
-      }
-    })
-  }
+
   const handleCancel = async (): Promise<void> => {
     setSuccess(false)
     setIsCancelOpen(true)
     await cancelExecution(sdk)
-    const provider = new ethers.providers.JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     contract.on('ExecutionCancelled', (ownerAddress) => {
       if (ownerAddress === safe.safeAddress) {
@@ -226,16 +233,25 @@ function MyWills(): React.ReactElement {
       }
     })
   }
-  const handleExecute = async (wills: FormTypes[]): Promise<void> => {
-    await executeWill(sdk, wills)
-    /* const provider = new ethers.providers.JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+  const handleExecute = async () => {
+    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
-    contract.on('WillExecuted', (ownerAddress) => {
-      if (ownerAddress === safe.safeAddress) {
+    setSuccess(false)
+    setIsExecuteOpen(true)
+    const formattedData = []
+    for (let i = 0; i < displayData.length; i += 1) {
+      const formattedWill = formatData(displayData[i], safe.safeAddress)
+      formattedData.push(formattedWill)
+    }
+
+    await executeWill(sdk, formattedData)
+
+    contract.on('WillExecuted', (address) => {
+      if (safe.safeAddress === address) {
         setSuccess(true)
         setIsExecuteOpen(true)
       }
-    }) */
+    })
   }
   const handleScroll = (e: FormEvent<HTMLInputElement>) => {
     e.currentTarget.blur()
@@ -263,7 +279,6 @@ function MyWills(): React.ReactElement {
 
   return (
     <Container>
-      {console.log(mm)}
       {isCreateOpen && (
         <div style={{ justifyContent: 'right' }}>
           <GenericModal
@@ -385,7 +400,8 @@ function MyWills(): React.ReactElement {
 
       <WillForm onSubmit={handleSubmit(onSubmit)}>
         {willFields.map((element, index) => {
-          console.log(willFields)
+          console.log('willfields', willFields)
+          console.log('errors', errors)
           return (
             <MyWill key={element.id} nestIndex={index} control={control} errors={errors} clearErrors={clearErrors} />
           )
@@ -393,11 +409,12 @@ function MyWills(): React.ReactElement {
         <Row style={{ justifyContent: 'center' }}>
           <Button
             size="md"
+            color="secondary"
             onClick={() =>
               appendWill({
-                cooldown: '0',
+                cooldown: '',
                 isActive: false,
-                requestTime: '0',
+                requestTime: '',
                 native: [
                   {
                     beneficiaries: [{ address: '', percentage: null }],
@@ -419,31 +436,24 @@ function MyWills(): React.ReactElement {
         </Row>
         {willFields.length > 1 && (
           <Row style={{ justifyContent: 'center' }}>
-            <Button size="md" onClick={() => removeWill(willFields.length - 1)}>
+            <Button size="md" color="secondary" onClick={() => removeWill(willFields.length - 1)}>
               Remove Cross Chain Will
             </Button>
           </Row>
         )}
 
         <Row style={{ justifyContent: 'center' }}>
-          <Button size="md" type="submit">
+          <Button size="md" color="secondary" type="submit">
             {hasWill ? 'Update Will' : 'Create Will'}
           </Button>
         </Row>
 
         {hasWill && (
-          <>
-            <Row style={{ justifyContent: 'center' }}>
-              <Button size="md" onClick={() => handleDelete()}>
-                Delete Will
-              </Button>
-            </Row>
-            <Row style={{ justifyContent: 'center' }}>
-              <Button size="md" onClick={() => handleRequest()}>
-                Request Execution
-              </Button>
-            </Row>
-          </>
+          <Row style={{ justifyContent: 'center' }}>
+            <Button size="md" color="error" onClick={() => handleDelete()}>
+              Delete Will
+            </Button>
+          </Row>
         )}
 
         {execTime && (
@@ -460,7 +470,7 @@ function MyWills(): React.ReactElement {
         )}
         {isExecutable && (
           <Row style={{ justifyContent: 'center' }}>
-            <Button size="md" onClick={() => handleExecute(mm)}>
+            <Button size="md" onClick={() => handleExecute()}>
               Execute Will
             </Button>
           </Row>

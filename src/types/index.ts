@@ -49,7 +49,7 @@ export enum Form {
   IsActive = 'isActive',
   RequestTime = 'requestTime',
   Cooldown = 'cooldown',
-  NativeToken = 'native',
+  Native = 'native',
   Tokens = 'tokens',
   NFTS = 'nfts',
   Erc1155s = 'erc1155s',
@@ -64,7 +64,7 @@ export interface FormTypes {
   [Form.IsActive]: boolean
   [Form.RequestTime]: string
   [Form.Cooldown]: string
-  [Form.NativeToken]: NativeToken[]
+  [Form.Native]: NativeToken[]
   [Form.Erc1155s]: Erc1155[]
   [Form.Tokens]: Token[]
   [Form.NFTS]: NFT[]

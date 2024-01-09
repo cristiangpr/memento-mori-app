@@ -59,7 +59,13 @@ export default function BeneficiaryFields({
                         ? `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.tokenId`
                         : `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.address`
                     }
-                    error={errors[tokenType] && errors[tokenType][nestIndex] && errors[tokenType][nestIndex].message}
+                    error={
+                      errors &&
+                      errors.wills &&
+                      errors.wills[willIndex] &&
+                      errors.wills[willIndex][tokenType] &&
+                      errors.wills[willIndex][tokenType][nestIndex].message
+                    }
                   />
                 )}
               />
@@ -94,10 +100,12 @@ export default function BeneficiaryFields({
                     helperText={tokenType !== 'nfts' && 'Make sure percentages add up to 100'}
                     error={
                       errors &&
-                      errors[tokenType] &&
-                      errors[tokenType][nestIndex] &&
-                      errors[tokenType][nestIndex].beneficiaries &&
-                      errors[tokenType][nestIndex].beneficiaries.message
+                      errors.wills &&
+                      errors.wills[willIndex] &&
+                      errors.wills[willIndex][tokenType] &&
+                      errors.wills[willIndex][tokenType][nestIndex] &&
+                      errors.wills[willIndex][tokenType][nestIndex].beneficiaries &&
+                      errors.wills[willIndex][tokenType][nestIndex].beneficiaries.message
                     }
                   />
                 )}

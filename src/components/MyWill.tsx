@@ -20,16 +20,7 @@ import { BaseContract, Contract, getDefaultProvider } from 'ethers'
 import { useSafeBalances } from '../hooks/useSafeBalances'
 import BalancesTable from './BalancesTable'
 import { DisplayData, Form, FormTypes } from '../types'
-import {
-  cancelExecution,
-  createWill,
-  deleteWill,
-  executeWill,
-  formatData,
-  getExecTime,
-  getWill,
-  requestExecution,
-} from '../utils'
+import { cancelExecution, deleteWill, executeWill, formatData, getExecTime, requestExecution } from '../utils'
 import { Container, Row, LeftColumn, RightColumn, WillForm } from './FormElements'
 // eslint-disable-next-line import/no-cycle
 import BeneficiaryFields from './BeneficiaryFields'
@@ -131,8 +122,13 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
                     name={`wills.${nestIndex}.tokens.${index}.contractAddress`}
                     value={value}
                     error={
-                      errors && errors.tokens && errors.tokens[index] && errors.tokens[index].contractAddress
-                        ? errors.tokens[index].contractAddress.message
+                      errors &&
+                      errors.wills &&
+                      errors.wills[nestIndex] &&
+                      errors.wills[nestIndex].tokens &&
+                      errors.wills[nestIndex].tokens[index] &&
+                      errors.wills[nestIndex].tokens[index].contractAddress
+                        ? errors.wills[nestIndex].tokens[index].contractAddress.message
                         : error?.type
                     }
                   />
@@ -192,7 +188,16 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
                     label="contract address"
                     name={`wills.${nestIndex}.nfts.${index}.contractAddress`}
                     value={value}
-                    error={error?.type}
+                    error={
+                      errors &&
+                      errors.wills &&
+                      errors.wills[nestIndex] &&
+                      errors.wills[nestIndex].nfts &&
+                      errors.wills[nestIndex].nfts[index] &&
+                      errors.wills[nestIndex].nfts[index].contractAddress
+                        ? errors.wills[nestIndex].nfts[index].contractAddress.message
+                        : error?.type
+                    }
                   />
                 )}
               />
@@ -246,7 +251,16 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
                       inputRef={ref}
                       label="contract address"
                       name={`wills.${nestIndex}.erc1155s.${index}.contractAddress`}
-                      error={error?.type}
+                      error={
+                        errors &&
+                        errors.wills &&
+                        errors.wills[nestIndex] &&
+                        errors.wills[nestIndex].erc1155s &&
+                        errors.wills[nestIndex].erc1155s[index] &&
+                        errors.wills[nestIndex].erc1155s[index].contractAddress
+                          ? errors.wills[nestIndex].erc1155s[index].contractAddress.message
+                          : error?.type
+                      }
                     />
                   )}
                 />

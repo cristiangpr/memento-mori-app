@@ -7,7 +7,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { useSafeBalances } from './hooks/useSafeBalances'
 import BalancesTable from './components/BalancesTable'
 import { Form, FormTypes } from './types'
-import { createWill } from './utils'
+
 // eslint-disable-next-line import/no-cycle
 import BeneficiaryFields from './components/BeneficiaryFields'
 import Navbar from './components/Navbar'

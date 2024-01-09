@@ -1,36 +1,41 @@
+/* eslint-disable no-await-in-loop */
+/* eslint-disable prefer-const */
 /* eslint-disable prefer-destructuring */
 /* eslint-disable no-param-reassign */
-import { Contract, ethers } from 'ethers'
+import { Contract, Interface, ZeroAddress, ethers } from 'ethers'
 
 import { BaseTransaction, SendTransactionsParams, SendTransactionsResponse } from '@safe-global/safe-apps-sdk'
 import SafeAppsSDK from '@safe-global/safe-apps-sdk/dist/src/sdk'
 import { parse, sep } from 'path'
 import Safe from '@safe-global/protocol-kit'
-import { Interface } from 'ethers/lib/utils'
 import ABI from './abis/mementoMori.json'
-import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, DisplayData, Forms } from './types'
-import { sepoliaMmAddress } from './constants'
-
-export const encodeTxData = (
-  cooldown: string,
-  native: NativeToken,
-  tokens: Token[],
-  nfts: NFT[],
-  erc1155s: Erc1155[],
-  executors: string[],
-): string => {
-  const dieSmartInterface = new ethers.utils.Interface(ABI)
-  return dieSmartInterface.encodeFunctionData('createWill', [cooldown, native, tokens, nfts, erc1155s, executors])
-}
+import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, DisplayData, Forms, Form } from './types'
+import { devUrl, sepoliaMmAddress } from './constants'
 
 export const saveWill = async (data: FormTypes[]): Promise<void> => {
-  console.log('data', data.length)
   for (let i = 0; i < data.length; i += 1) {
-    const response = fetch('http://localhost:1337/api/wills', {
-      method: 'POST',
-      headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: data[i] }),
-    })
+    const res = await fetch(
+      `${devUrl}?filters[baseAddress][$eq]=${data[i].baseAddress}&filters[chainSelector][$eq]=${data[i].chainSelector}`,
+      {
+        method: 'GET',
+        headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
+      },
+    )
+    const check = await res.json()
+    console.log(check)
+    if (check.data.length > 0) {
+      fetch(`${devUrl}/${check.data[0].id}`, {
+        method: 'PUT',
+        headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: data[i] }),
+      })
+    } else {
+      fetch(devUrl, {
+        method: 'POST',
+        headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: data[i] }),
+      })
+    }
   }
 }
 export const saveWillHash = async (
@@ -39,7 +44,7 @@ export const saveWillHash = async (
   safe: { safeAddress: any; chainId?: number; threshold?: number; owners?: string[]; isReadOnly?: boolean },
 ): Promise<void> => {
   console.log('hash', wills)
-  const IMementoMori = new ethers.utils.Interface(ABI)
+  const IMementoMori = new Interface(ABI)
   const data = IMementoMori.encodeFunctionData('saveWillHash', [wills])
   const safeSaveWillHashTransaction: BaseTransaction = {
     to: sepoliaMmAddress,
@@ -78,15 +83,13 @@ export const saveWillHash = async (
   }
 }
 
-export const getWills = async (address: string): Promise<UserInfo> => {
-  const response = await fetch(
-    `https://iwill-strapi.herokuapp.com/api/wills?filters[baseAddress][$eq]=${address}&paginationl[start]=0&pagination[limit]=10`,
-    {
-      method: 'GET',
-      headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
-    },
-  )
-  return response.json()
+export const getWills = async (address: string): Promise<Forms> => {
+  const response = await fetch(`${devUrl}?filters[baseAddress][$eq]=${address}&sort=id`, {
+    method: 'GET',
+    headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
+  })
+  const result = await response.json()
+  return result.data
 }
 
 export const formatData = (data: FormTypes, ownerAddress: string): FormTypes => {
@@ -151,138 +154,104 @@ export const formatData = (data: FormTypes, ownerAddress: string): FormTypes => 
   const uniqueExecutors = [...new Set(executors)]
   uniqueExecutors.push(ownerAddress)
   const filteredExecutors = uniqueExecutors.filter((address) => {
-    return address !== ethers.constants.AddressZero
+    return address !== ZeroAddress
   })
   newData.executors = filteredExecutors
 
   return newData
 }
 
-export const createWill = async (
-  data: FormTypes,
-  sdk: SafeAppsSDK,
-  safe: { safeAddress: any; chainId?: number; threshold?: number; owners?: string[]; isReadOnly?: boolean },
-): Promise<boolean> => {
-  const txData = encodeTxData(data.cooldown, data.native[0], data.tokens, data.nfts, data.erc1155s, data.executors)
-  const createWillTransaction: BaseTransaction = {
-    to: sepoliaMmAddress,
-    value: '10000000',
-    data: txData,
-  }
-  const params = { safeTxGas: 500000000 }
-  const IisModuleEnabled: Interface = new Interface(['function isModuleEnabled(address module)'])
-  const isModuleEnabledData: string = IisModuleEnabled.encodeFunctionData('isModuleEnabled', [sepoliaMmAddress])
-  const isModuleEnabledParams = {
-    to: safe.safeAddress,
-    data: isModuleEnabledData,
-  }
-  const isEnabledData: string = await sdk.eth.call([isModuleEnabledParams])
-  const isEnabled = isEnabledData !== '0x0000000000000000000000000000000000000000000000000000000000000000'
-  if (isEnabled) {
-    const safeCreateWillTransaction = await sdk.txs.send({
-      txs: [createWillTransaction],
-      params,
-    })
-  } else {
-    const IenableModule: Interface = new Interface(['function enableModule(address module)'])
+export const getDisplayData = (data: any): FormTypes[] => {
+  const result = []
+  for (let h = 0; h < data.length; h += 1) {
+    let {
+      isActive,
+      cooldown,
+      requestTime,
+      native,
+      tokens,
+      nfts,
+      erc1155s,
+      executors,
+      baseAddress,
+      chainSelector,
+      xChainAddress,
+      safe,
+    } = data[h].attributes
 
-    const enableModuleData: string = IenableModule.encodeFunctionData('enableModule', [sepoliaMmAddress])
-
-    const safeEnableModuleTransactionData: BaseTransaction = {
-      to: safe.safeAddress,
-      value: '0',
-      data: enableModuleData,
+    const nativeBeneficiaries = []
+    for (let i = 0; i < native[0].beneficiaries.length; i += 1) {
+      const nativeBeneficiary = { address: '', percentage: null }
+      nativeBeneficiary.address = native[0].beneficiaries[i]
+      nativeBeneficiary.percentage = native[0].percentages[i]
+      nativeBeneficiaries.push(nativeBeneficiary)
     }
+    const tokensArr = []
+    if (tokens.length > 0) {
+      for (let i = 0; i < tokens.length; i += 1) {
+        const token = { contractAddress: '', beneficiaries: [] }
 
-    const safeCreateWillTransaction: SendTransactionsResponse = await sdk.txs.send({
-      txs: [createWillTransaction, safeEnableModuleTransactionData],
-      params,
-    })
-  }
+        token.contractAddress = tokens[i].contractAddress
+        for (let j = 0; j < tokens[i].beneficiaries.length; j += 1) {
+          const tokenBeneficiary = { address: '', percentage: null }
 
-  return true
-}
-
-export const getWill = async (address: string, sdk: SafeAppsSDK): Promise<DisplayData> => {
-  const dieSmartInterface: Interface = new Interface(ABI)
-  const getWillData: string = dieSmartInterface.encodeFunctionData('getWill', [address])
-
-  const getWillTransaction = {
-    to: sepoliaMmAddress,
-    data: getWillData,
-  }
-  const data = await sdk.eth.call([getWillTransaction])
-
-  // eslint-disable-next-line prefer-const
-  let { isActive, cooldown, requestTime, native, tokens, nfts, erc1155s, executors } =
-    dieSmartInterface.decodeFunctionResult('getWill', data)[0]
-  console.log('data', isActive, cooldown, requestTime, native, tokens, nfts, erc1155s, executors)
-  const nativeBeneficiaries = []
-  for (let i = 0; i < native[0].length; i += 1) {
-    const nativeBeneficiary = { address: '', percentage: null }
-    nativeBeneficiary.address = native[0][i]
-    nativeBeneficiary.percentage = Number(native[1][i])
-    nativeBeneficiaries.push(nativeBeneficiary)
-  }
-  const tokensArr = []
-  if (tokens.length > 0) {
-    for (let i = 0; i < tokens.length; i += 1) {
-      const token = { contractAddress: '', beneficiaries: [] }
-
-      token.contractAddress = tokens[i][0]
-      for (let j = 0; j < tokens[i][1].length; j += 1) {
-        const tokenBeneficiary = { address: '', percentage: null }
-
-        tokenBeneficiary.address = tokens[i][1][j]
-        tokenBeneficiary.percentage = Number(tokens[i][2][j])
-        token.beneficiaries.push(tokenBeneficiary)
+          tokenBeneficiary.address = tokens[i].beneficiaries[j]
+          tokenBeneficiary.percentage = tokens[i].percentages[j]
+          token.beneficiaries.push(tokenBeneficiary)
+        }
+        tokensArr.push(token)
       }
-      tokensArr.push(token)
     }
-  }
-  const nftsArr = []
-  if (nfts.length > 0) {
-    for (let i = 0; i < nfts.length; i += 1) {
-      const nft = { contractAddress: '', beneficiaries: [] }
-      const nftBeneficiary = { tokenId: null, beneficiary: '' }
-      nft.contractAddress = nfts[i][0]
-      for (let j = 0; j < nfts[i][1].length; j += 1) {
-        nftBeneficiary.tokenId = Number(nfts[i][1][j])
-        nftBeneficiary.beneficiary = nfts[i][2][j]
-        nft.beneficiaries.push(nftBeneficiary)
-      }
-      nftsArr.push(nft)
-    }
-  }
-  const erc1155sArr = []
-  if (erc1155s.length > 0) {
-    for (let i = 0; i < erc1155s.length; i += 1) {
-      const erc1155 = { contractAddress: '', tokenId: null, beneficiaries: [] }
 
-      erc1155.contractAddress = erc1155s[i][0]
-      if (erc1155.contractAddress === ethers.constants.AddressZero) break
-      erc1155.tokenId = Number(erc1155s[i][1])
-      for (let j = 0; j < erc1155s[i][2].length; j += 1) {
-        const erc1155Beneficiary = { address: '', percentage: null }
-        erc1155Beneficiary.address = erc1155s[i][2][j]
-        erc1155Beneficiary.percentage = Number(erc1155s[i][3][j])
-        erc1155.beneficiaries.push(erc1155Beneficiary)
+    const nftsArr = []
+    if (nfts.length > 0) {
+      for (let i = 0; i < nfts.length; i += 1) {
+        const nft = { contractAddress: '', beneficiaries: [] }
+        const nftBeneficiary = { tokenId: null, beneficiary: '' }
+        nft.contractAddress = nfts[i].contractAddress
+        for (let j = 0; j < nfts[i][1].length; j += 1) {
+          nftBeneficiary.tokenId = nfts[i].tokenIds[j]
+          nftBeneficiary.beneficiary = nfts[i].beneficiaries[j]
+          nft.beneficiaries.push(nftBeneficiary)
+        }
+        nftsArr.push(nft)
       }
-      erc1155sArr.push(erc1155)
     }
+    const erc1155sArr = []
+    if (erc1155s.length > 0) {
+      for (let i = 0; i < erc1155s.length; i += 1) {
+        const erc1155 = { contractAddress: '', tokenId: null, beneficiaries: [] }
+
+        erc1155.contractAddress = erc1155s[i].contractAddress
+
+        erc1155.tokenId = erc1155s[i].contractAddress
+        for (let j = 0; j < erc1155s[i][2].length; j += 1) {
+          const erc1155Beneficiary = { address: '', percentage: null }
+          erc1155Beneficiary.address = erc1155s[i].beneficiaries[j]
+          erc1155Beneficiary.percentage = erc1155s[i].percentages[j]
+          erc1155.beneficiaries.push(erc1155Beneficiary)
+        }
+        erc1155sArr.push(erc1155)
+      }
+    }
+    const will = {
+      isActive,
+      cooldown,
+      requestTime,
+
+      tokens: tokensArr,
+      nfts: nftsArr,
+      erc1155s: erc1155sArr,
+      executors,
+      baseAddress,
+      chainSelector,
+      xChainAddress,
+      safe,
+      native: [{ beneficiaries: nativeBeneficiaries }],
+    }
+    result.push(will)
   }
-  cooldown = Number(cooldown)
-  requestTime = Number(requestTime)
-  return {
-    isActive,
-    cooldown,
-    requestTime,
-    nativeToken: { beneficiaries: nativeBeneficiaries },
-    tokens: tokensArr,
-    nfts: nftsArr,
-    erc1155s: erc1155sArr,
-    executors,
-  }
+  return result
 }
 
 export const executeWill = async (sdk: SafeAppsSDK, wills: FormTypes[]): Promise<string> => {
@@ -301,26 +270,6 @@ export const executeWill = async (sdk: SafeAppsSDK, wills: FormTypes[]): Promise
   return hash
 }
 
-export const executeWillByOwner = async (sdk: SafeAppsSDK, ownerAddress: any): Promise<void> => {
-  const mmInterface: Interface = new Interface(ABI)
-  const executeData: string = mmInterface.encodeFunctionData('execute', [ownerAddress, 500000000])
-  const executeWillTransaction: BaseTransaction = {
-    to: sepoliaMmAddress,
-    value: '0',
-    data: executeData,
-  }
-  const requestData: string = mmInterface.encodeFunctionData('requestExecution', [ownerAddress])
-  const requestTransaction: BaseTransaction = {
-    to: sepoliaMmAddress,
-    value: '0',
-    data: requestData,
-  }
-  const params = { safeTxGas: 500000000 }
-  await sdk.txs.send({
-    txs: [executeWillTransaction],
-  })
-}
-
 export const deleteWill = async (sdk: SafeAppsSDK): Promise<void> => {
   const mmInterface = new Interface(ABI)
   const executeData = mmInterface.encodeFunctionData('deleteWill')
@@ -335,34 +284,54 @@ export const deleteWill = async (sdk: SafeAppsSDK): Promise<void> => {
   })
 }
 
-export const requestExecution = async (owner: string, sdk: SafeAppsSDK): Promise<void> => {
-  const mmInterface: Interface = new Interface(ABI)
-  const requestData: string = mmInterface.encodeFunctionData('requestExecution', [owner])
-  const requestTransaction: BaseTransaction = {
-    to: sepoliaMmAddress,
-    value: '0',
-    data: requestData,
-  }
-  await sdk.txs.send({
-    txs: [requestTransaction],
+export const requestExecution = async (owner: string, safe): Promise<boolean> => {
+  const response = await fetch(`${devUrl}?filters[baseAddress][$eq]=${owner}&sort=id`, {
+    method: 'GET',
+    headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
   })
+  const result = await response.json()
+  if (result.data.length > 0) {
+    for (let i = 0; i < result.data[0].attributes.executors.length; i += 1) {
+      if (result.data[0].attributes.executors[i] === safe.safeAddress) {
+        fetch(`${devUrl}/${result.data[0].id}`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ data: { isActive: true, requestTime: Math.floor(Date.now() / 1000).toString() } }),
+        })
+        return true
+      }
+    }
+  }
+  return false
 }
 
-export const cancelExecution = async (sdk: SafeAppsSDK): Promise<void> => {
-  const mmInterface = new Interface(ABI)
-  const cancelData: string = mmInterface.encodeFunctionData('cancelExecution')
-  const cancelTransaction: BaseTransaction = {
-    to: sepoliaMmAddress,
-    value: '0',
-    data: cancelData,
-  }
-  await sdk.txs.send({
-    txs: [cancelTransaction],
+export const cancelExecution = async (safe): Promise<boolean> => {
+  const response = await fetch(`${devUrl}?filters[baseAddress][$eq]=${safe}&sort=id`, {
+    method: 'GET',
+    headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
   })
+  const result = await response.json()
+  if (result.data.length > 0) {
+    if (result.data[0].attributes.baseAddress === safe.safeAddress) {
+      fetch(`${devUrl}/${result.data[0].id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: { isActive: false } }),
+      })
+      return true
+    }
+  }
+  return false
 }
 
 export const getIsExecutor = (
-  data: DisplayData,
+  data: FormTypes,
   safe: { safeAddress: any; chainId?: number; threshold?: number; owners: any; isReadOnly?: boolean },
 ): boolean => {
   for (let i = 0; i < data.executors.length; i += 1) {
