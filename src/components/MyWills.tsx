@@ -19,7 +19,7 @@ import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import { BaseContract, Contract, ethers, getAddress, getDefaultProvider, JsonRpcProvider } from 'ethers'
 import { useSafeBalances } from '../hooks/useSafeBalances'
 import BalancesTable from './BalancesTable'
-import { ContractWill, Form, FormTypes, Forms } from '../types'
+import { ContractWill, Form, FormTypes, Forms, TransactionType, TransactionStatus } from '../types'
 import {
   cancelExecution,
   deleteWill,
@@ -40,6 +40,7 @@ import { baseGChainSelector, baseGMmAddress, sepoliaChainSelector, sepoliaMmAddr
 import ABI from '../abis/mementoMori.json'
 import { validateDuplicates, validateFieldsSum } from '../validation'
 import MyWill from './MyWill'
+import { Modal } from './Modal'
 
 function MyWills(): React.ReactElement {
   const { sdk, safe } = useSafeAppsSDK()
@@ -48,13 +49,9 @@ function MyWills(): React.ReactElement {
   const [isExecutable, setIsExecutable] = useState<boolean>(false)
   const [execTime, setExecTime] = useState<number>()
   const [hasWill, setHasWill] = useState<boolean>(false)
-  const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false)
-  const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false)
-  const [isRequestOpen, setIsRequestOpen] = useState<boolean>(false)
-  const [isExecuteOpen, setIsExecuteOpen] = useState<boolean>(false)
-  const [isCancelOpen, setIsCancelOpen] = useState<boolean>(false)
-  const [success, setSuccess] = useState<boolean>(false)
-  const [mm, setMm] = useState<FormTypes[]>()
+  const [isOpen, setIsOpen] = useState<boolean>(false)
+  const [transactionType, setTransactionType] = useState<TransactionType>()
+  const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>(TransactionStatus.Confirm)
 
   const {
     register,
@@ -174,8 +171,9 @@ function MyWills(): React.ReactElement {
   }, [reset, hasWill, displayData, safe.safeAddress, appendWill])
 
   const onSubmit = async (data: Forms): Promise<void> => {
-    setSuccess(false)
-    setIsCreateOpen(true)
+    setTransactionType(TransactionType.Create)
+    setTransactionStatus(TransactionStatus.Executing)
+    setIsOpen(true)
     console.log('url', process.env.REACT_APP_RPC_URL)
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
@@ -198,30 +196,44 @@ function MyWills(): React.ReactElement {
 
       contract.on('WillCreated', (ownerAddress) => {
         if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
-          setSuccess(true)
-          setIsCreateOpen(true)
+          setTransactionStatus(TransactionStatus.Success)
+          setIsOpen(true)
         }
       })
     }
   }
   const handleDelete = async (): Promise<void> => {
-    setSuccess(false)
-    setIsDeleteOpen(true)
-    await deleteWill(sdk)
+    setTransactionType(TransactionType.Delete)
+    setTransactionStatus(TransactionStatus.Executing)
+    setIsOpen(true)
+    await deleteWill(displayData, sdk, safe)
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     contract.on('WillDeleted', (ownerAddress) => {
       if (ownerAddress === safe.safeAddress) {
-        setSuccess(true)
-        setIsDeleteOpen(true)
+        setTransactionStatus(TransactionStatus.Success)
+        setIsOpen(true)
         reset({
           wills: [
             {
-              cooldown: null,
-              native: [],
-              tokens: [],
-              nfts: [],
-              erc1155s: [],
+              [Form.Cooldown]: '',
+              [Form.IsActive]: false,
+              [Form.RequestTime]: '0',
+
+              [Form.Native]: [
+                {
+                  beneficiaries: [{ address: '', percentage: null }],
+                },
+              ],
+
+              [Form.Tokens]: [],
+              [Form.NFTS]: [],
+              [Form.Erc1155s]: [],
+              [Form.ChainSelector]: sepoliaChainSelector,
+              [Form.Safe]: safe.safeAddress,
+              [Form.BaseAddress]: safe.safeAddress,
+              [Form.XChainAddress]: safe.safeAddress,
+              [Form.Executed]: false,
             },
           ],
         })
@@ -230,23 +242,25 @@ function MyWills(): React.ReactElement {
   }
 
   const handleCancel = async (): Promise<void> => {
-    setSuccess(false)
-    setIsCancelOpen(true)
+    setTransactionType(TransactionType.Cancel)
+    setTransactionStatus(TransactionStatus.Executing)
+    setIsOpen(true)
     await cancelExecution(sdk)
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     contract.on('ExecutionCancelled', (ownerAddress) => {
       if (ownerAddress === safe.safeAddress) {
-        setSuccess(true)
-        setIsCancelOpen(true)
+        setTransactionStatus(TransactionStatus.Success)
+        setIsOpen(true)
       }
     })
   }
   const handleExecute = async () => {
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
-    setSuccess(false)
-    setIsExecuteOpen(true)
+    setTransactionType(TransactionType.Execute)
+    setTransactionStatus(TransactionStatus.Executing)
+    setIsOpen(true)
     const formattedData = []
     for (let i = 0; i < displayData.length; i += 1) {
       const formattedWill = formatDataForContract(displayData[i], safe.safeAddress)
@@ -257,143 +271,32 @@ function MyWills(): React.ReactElement {
 
     contract.on('WillExecuted', (address) => {
       if (safe.safeAddress === address) {
-        setSuccess(true)
-        setIsExecuteOpen(true)
+        setTransactionStatus(TransactionStatus.Success)
+        setIsOpen(true)
       }
     })
   }
   const handleScroll = (e: FormEvent<HTMLInputElement>) => {
     e.currentTarget.blur()
   }
-  const handleCreateClose = () => {
-    setIsCreateOpen(false)
-    setSuccess(false)
-  }
-  const handleDeleteClose = () => {
-    setIsDeleteOpen(false)
-    setSuccess(false)
-  }
-  const handleRequestClose = () => {
-    setIsRequestOpen(false)
-    setSuccess(false)
-  }
-  const handleCancelClose = () => {
-    setIsCancelOpen(false)
-    setSuccess(false)
-  }
-  const handleExecuteClose = () => {
-    setIsExecuteOpen(false)
-    setSuccess(false)
+  const handleClose = () => {
+    setIsOpen(false)
   }
 
   return (
     <Container>
-      {isCreateOpen && (
+      {isOpen && (
         <div style={{ justifyContent: 'right' }}>
-          <GenericModal
-            title={
-              hasWill && !success
-                ? 'Updating Will'
-                : !hasWill && !success
-                ? 'Creating Will'
-                : hasWill && success
-                ? 'Will Updated'
-                : 'Will Created'
-            }
-            body={
-              !success ? (
-                <div style={{ paddingLeft: '11.875rem' }}>
-                  <Loader size="lg" />
-                </div>
-              ) : (
-                <div style={{ paddingLeft: '12.875rem' }}>
-                  <Dot color="primary">
-                    <Icon color="white" type="check" size="sm" />
-                  </Dot>
-                </div>
-              )
-            }
-            onClose={() => handleCreateClose()}
+          <Modal
+            transactionStatus={transactionStatus}
+            transactionType={transactionType}
+            handleClose={handleClose}
+            hasWill={hasWill}
+            execTime={execTime}
           />
         </div>
       )}
-      {isDeleteOpen && (
-        <GenericModal
-          title={!success ? 'Deleting Will' : 'Will Deleted'}
-          body={
-            !success ? (
-              <div style={{ paddingLeft: '11.875rem' }}>
-                <Loader size="lg" />
-              </div>
-            ) : (
-              <div style={{ paddingLeft: '12.875rem' }}>
-                <Dot color="primary">
-                  <Icon color="white" type="check" size="sm" />
-                </Dot>
-              </div>
-            )
-          }
-          onClose={() => handleDeleteClose()}
-        />
-      )}
-      {isRequestOpen && (
-        <GenericModal
-          title={!success ? 'Requesting Execution' : 'Execution Requested'}
-          body={
-            !success ? (
-              <div style={{ paddingLeft: '11.875rem' }}>
-                <Loader size="lg" />
-              </div>
-            ) : (
-              <div style={{ paddingLeft: '12.875rem' }}>
-                <Dot color="primary">
-                  <Icon color="white" type="check" size="sm" />
-                </Dot>
-                <div>Will executable after {new Date(execTime * 1000).toLocaleString()}</div>
-              </div>
-            )
-          }
-          onClose={() => handleRequestClose()}
-        />
-      )}
-      {isCancelOpen && (
-        <GenericModal
-          title={!success ? 'Cancelling Execution' : 'Execution Cancelled'}
-          body={
-            !success ? (
-              <div style={{ paddingLeft: '11.875rem' }}>
-                <Loader size="lg" />
-              </div>
-            ) : (
-              <div style={{ paddingLeft: '12.875rem' }}>
-                <Dot color="primary">
-                  <Icon color="white" type="check" size="sm" />
-                </Dot>
-              </div>
-            )
-          }
-          onClose={() => handleCancelClose()}
-        />
-      )}
-      {isExecuteOpen && (
-        <GenericModal
-          title={!success ? 'Executing Will' : 'Will Executed'}
-          body={
-            !success ? (
-              <div style={{ paddingLeft: '11.875rem' }}>
-                <Loader size="lg" />
-              </div>
-            ) : (
-              <div style={{ paddingLeft: '12.875rem' }}>
-                <Dot color="primary">
-                  <Icon color="white" type="check" size="sm" />
-                </Dot>
-              </div>
-            )
-          }
-          onClose={() => handleExecuteClose()}
-        />
-      )}
+
       <Title size="lg">Memento Mori</Title>
       <Row style={{ width: '65%' }}>
         Memento Mori is an app that lets you create a will for your Safe. Beneficiaries of a will may request execution.

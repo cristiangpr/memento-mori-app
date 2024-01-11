@@ -344,10 +344,24 @@ export const executeWill = async (sdk: SafeAppsSDK, wills: FormTypes[]): Promise
   const hash = response.safeTxHash
   return hash
 }
-
-export const deleteWill = async (sdk: SafeAppsSDK): Promise<void> => {
+// TODO: implement in contract
+export const deleteWill = async (data: FormTypes[], sdk: SafeAppsSDK, safe): Promise<void> => {
+  for (let i = 0; i < data.length; i += 1) {
+    const res = await fetch(
+      `${prodUrl}?filters[baseAddress][$eq]=${safe.safeAddress}}&filters[chainSelector][$eq]=${data[i].chainSelector}`,
+      {
+        method: 'GET',
+        headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
+      },
+    )
+    const check = await res.json()
+    fetch(`${prodUrl}/${check.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
+    })
+  }
   const mmInterface = new Interface(ABI)
-  const executeData = mmInterface.encodeFunctionData('deleteWill')
+  const executeData = mmInterface.encodeFunctionData('deleteWill', [safe.safeAddress])
   const executeWillTransaction: BaseTransaction = {
     to: sepoliaMmAddress,
     value: '0',

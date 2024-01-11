@@ -14,10 +14,11 @@ import {
   requestExecution,
   saveWillHash,
 } from '../utils'
-import { FormTypes, Forms } from '../types'
+import { FormTypes, Forms, TransactionStatus, TransactionType } from '../types'
 import { Container, LeftColumn, RightColumn, Row, Will, WillForm } from './FormElements'
 import { sepoliaMmAddress } from '../constants'
 import ABI from '../abis/mementoMori.json'
+import { Modal } from './Modal'
 
 function Execute(): React.ReactElement {
   const [displayData, setDisplayData] = useState<FormTypes[]>()
@@ -26,9 +27,9 @@ function Execute(): React.ReactElement {
   const [isExecutable, setIsExecutable] = useState<boolean>(false)
   const [hasSearched, setHasSearched] = useState<boolean>(false)
   const [execTime, setExecTime] = useState<number>()
-  const [isRequestOpen, setIsRequestOpen] = useState<boolean>(false)
-  const [isExecuteOpen, setIsExecuteOpen] = useState<boolean>(false)
-  const [success, setSuccess] = useState<boolean>(false)
+  const [isOpen, setIsOpen] = useState<boolean>(false)
+  const [transactionType, setTransactionType] = useState<TransactionType>()
+  const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>(TransactionStatus.Confirm)
 
   const { safe, sdk } = useSafeAppsSDK()
 
@@ -41,14 +42,16 @@ function Execute(): React.ReactElement {
   const handleRequest = async (): Promise<void> => {
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract: BaseContract = new BaseContract(sepoliaMmAddress, ABI, provider)
-    setSuccess(false)
-    setIsRequestOpen(true)
+    setTransactionType(TransactionType.Request)
+    setTransactionStatus(TransactionStatus.Executing)
+    setIsOpen(true)
     await requestExecution(ownerAddress, safe)
-    const data = await getWills(ownerAddress)
-    const display = getDisplayData(data)
+    await loadData
+    displayData[0].isActive = true
+    console.log('request', displayData)
     const formattedData = []
-    for (let i = 0; i < display.length; i += 1) {
-      const formattedWill = formatDataForContract(display[i], safe.safeAddress)
+    for (let i = 0; i < displayData.length; i += 1) {
+      const formattedWill = formatDataForContract(displayData[i], safe.safeAddress)
       formattedData.push(formattedWill)
     }
     console.log('request', formattedData)
@@ -56,16 +59,17 @@ function Execute(): React.ReactElement {
 
     contract.on('WillCreated', (address) => {
       if (ownerAddress === address) {
-        setSuccess(true)
-        setIsRequestOpen(true)
+        setTransactionStatus(TransactionStatus.Success)
+        setIsOpen(true)
       }
     })
   }
   const handleExecute = async () => {
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
-    setSuccess(false)
-    setIsExecuteOpen(true)
+    setTransactionType(TransactionType.Execute)
+    setTransactionStatus(TransactionStatus.Executing)
+    setIsOpen(true)
     const formattedData = []
     for (let i = 0; i < displayData.length; i += 1) {
       const formattedWill = formatDataForContract(displayData[i], safe.safeAddress)
@@ -77,18 +81,13 @@ function Execute(): React.ReactElement {
 
     contract.on('WillExecuted', (address) => {
       if (ownerAddress === address) {
-        setSuccess(true)
-        setIsExecuteOpen(true)
+        setTransactionStatus(TransactionStatus.Success)
+        setIsOpen(true)
       }
     })
   }
-  const handleRequestClose = (): void => {
-    setIsRequestOpen(false)
-    setSuccess(false)
-  }
-  const handleExecuteClose = (): void => {
-    setIsExecuteOpen(false)
-    setSuccess(false)
+  const handleClose = (): void => {
+    setIsOpen(false)
   }
 
   useEffect(() => {
@@ -105,43 +104,12 @@ function Execute(): React.ReactElement {
 
   return (
     <Container>
-      {isRequestOpen && (
-        <GenericModal
-          title={!success ? 'Requesting Execution' : 'Execution Requested'}
-          body={
-            !success ? (
-              <div style={{ paddingLeft: '11.875rem' }}>
-                <Loader size="lg" />
-              </div>
-            ) : (
-              <div style={{ paddingLeft: '12.875rem' }}>
-                <Dot color="primary">
-                  <Icon color="white" type="check" size="sm" />
-                </Dot>
-                <div>Will executable after {new Date(execTime * 1000).toLocaleString()}</div>
-              </div>
-            )
-          }
-          onClose={() => handleRequestClose()}
-        />
-      )}
-      {isExecuteOpen && (
-        <GenericModal
-          title={!success ? 'Executing Will' : 'Will Executed'}
-          body={
-            !success ? (
-              <div style={{ paddingLeft: '11.875rem' }}>
-                <Loader size="lg" />
-              </div>
-            ) : (
-              <div style={{ paddingLeft: '12.875rem' }}>
-                <Dot color="primary">
-                  <Icon color="white" type="check" size="sm" />
-                </Dot>
-              </div>
-            )
-          }
-          onClose={() => handleExecuteClose()}
+      {isOpen && (
+        <Modal
+          transactionStatus={transactionStatus}
+          transactionType={transactionType}
+          handleClose={handleClose}
+          execTime={execTime}
         />
       )}
       <Title size="lg">Execute</Title>

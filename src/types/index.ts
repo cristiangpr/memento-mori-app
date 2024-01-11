@@ -3,6 +3,19 @@ export enum CooldownPeriod {
   TwoWeeks = 20160000,
   OneMonth = 43200000,
 }
+export enum TransactionType {
+  Create,
+  Request,
+  Cancel,
+  Execute,
+  Delete,
+}
+export enum TransactionStatus {
+  Confirm,
+  Executing,
+  Success,
+  Failure,
+}
 
 export type Beneficiary = {
   address: string
