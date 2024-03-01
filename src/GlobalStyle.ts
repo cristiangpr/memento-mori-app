@@ -10,6 +10,8 @@ const GlobalStyle = createGlobalStyle`
        height: 100%;
        margin: 0px;
        padding: 0px;
+       background:  rgb(31 41 55);
+      
     }
 
     #root {

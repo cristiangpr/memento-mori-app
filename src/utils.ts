@@ -9,7 +9,18 @@ import SafeAppsSDK from '@safe-global/safe-apps-sdk/dist/src/sdk'
 import { parse, sep } from 'path'
 import Safe from '@safe-global/protocol-kit'
 import ABI from './abis/mementoMori.json'
-import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, Forms, Form, ContractWill } from './types'
+import {
+  NFT,
+  UserInfo,
+  Token,
+  Erc1155,
+  NativeToken,
+  FormTypes,
+  Forms,
+  Form,
+  ContractWill,
+  TransactionType,
+} from './types'
 import { prodUrl, sepoliaMmAddress } from './constants'
 
 export const saveWill = async (data: FormTypes[]): Promise<void> => {
@@ -42,10 +53,11 @@ export const saveWillHash = async (
   wills: ContractWill[],
   sdk: SafeAppsSDK,
   safe: { safeAddress: any; chainId?: number; threshold?: number; owners?: string[]; isReadOnly?: boolean },
+  transactionType: TransactionType,
 ): Promise<void> => {
   console.log('hash', wills)
   const IMementoMori = new Interface(ABI)
-  const data = IMementoMori.encodeFunctionData('saveWillHash', [wills])
+  const data = IMementoMori.encodeFunctionData('saveWillHash', [wills, transactionType])
   const safeSaveWillHashTransaction: BaseTransaction = {
     to: sepoliaMmAddress,
     value: '10000000',
@@ -127,8 +139,8 @@ export const formatDataForApi = (data: FormTypes, ownerAddress: string): FormTyp
     const nftBeneficiaries = []
     const nftIds = []
     for (let j = 0; j < newData.nfts[i].beneficiaries.length; j += 1) {
-      nftBeneficiaries.push(newData.nfts[i].beneficiaries[j].beneficiary)
-      executors.push(newData.nfts[i].beneficiaries[j].beneficiary)
+      nftBeneficiaries.push(newData.nfts[i].beneficiaries[j].address)
+      executors.push(newData.nfts[i].beneficiaries[j].address)
 
       nftIds.push(newData.nfts[i].beneficiaries[j].tokenId)
     }
@@ -196,8 +208,8 @@ export const formatDataForContract = (data: FormTypes, ownerAddress: string): Co
     const nftBeneficiaries = []
     const nftIds = []
     for (let j = 0; j < newData.nfts[i].beneficiaries.length; j += 1) {
-      nftBeneficiaries.push(newData.nfts[i].beneficiaries[j].beneficiary)
-      executors.push(newData.nfts[i].beneficiaries[j].beneficiary)
+      nftBeneficiaries.push(newData.nfts[i].beneficiaries[j].address)
+      executors.push(newData.nfts[i].beneficiaries[j].address)
 
       nftIds.push(newData.nfts[i].beneficiaries[j].tokenId)
     }
@@ -280,11 +292,11 @@ export const getDisplayData = (data: any[]): FormTypes[] => {
     if (nfts.length > 0) {
       for (let i = 0; i < nfts.length; i += 1) {
         const nft = { contractAddress: '', beneficiaries: [] }
-        const nftBeneficiary = { tokenId: null, beneficiary: '' }
+        const nftBeneficiary = { tokenId: null, address: '' }
         nft.contractAddress = nfts[i].contractAddress
         for (let j = 0; j < nfts[i][1].length; j += 1) {
           nftBeneficiary.tokenId = nfts[i].tokenIds[j]
-          nftBeneficiary.beneficiary = nfts[i].beneficiaries[j]
+          nftBeneficiary.address = nfts[i].beneficiaries[j]
           nft.beneficiaries.push(nftBeneficiary)
         }
         nftsArr.push(nft)

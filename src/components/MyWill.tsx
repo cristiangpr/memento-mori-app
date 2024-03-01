@@ -2,35 +2,46 @@
 /* eslint-disable no-param-reassign */
 import React, { FormEvent, useEffect, useState } from 'react'
 import styled from 'styled-components'
-import {
-  Title,
-  Button,
-  TextFieldInput,
-  Tab,
-  Menu,
-  Select,
-  GenericModal,
-  Loader,
-  Dot,
-  Icon,
-} from '@gnosis.pm/safe-react-components'
+import { Title, Button, TextFieldInput } from '@gnosis.pm/safe-react-components'
+import Stepper from '@material-ui/core/Stepper'
+import Step from '@material-ui/core/Step'
+import StepLabel from '@material-ui/core/StepLabel'
+import StepContent from '@material-ui/core/StepContent'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
-import { Controller, useFieldArray, useForm } from 'react-hook-form'
+import { Controller, useFieldArray, useForm, useFormContext } from 'react-hook-form'
 import { BaseContract, Contract, getDefaultProvider } from 'ethers'
 import { useSafeBalances } from '../hooks/useSafeBalances'
 import BalancesTable from './BalancesTable'
 import { Form, FormTypes } from '../types'
 
-import { Container, Row, LeftColumn, RightColumn, WillForm } from './FormElements'
+import { Container, Row, LeftColumn, RightColumn, WillForm, StyledStepper, StyledTitle } from './FormElements'
 // eslint-disable-next-line import/no-cycle
 import BeneficiaryFields from './BeneficiaryFields'
 import { sepoliaMmAddress } from '../constants'
 import ABI from '../abis/mementoMori.json'
-import { validateDuplicates, validateFieldsSum } from '../validation'
+import {
+  validatePercentages,
+  validateDuplicates,
+  validateContractAddresses,
+  validateBeneficiaryAddresses,
+} from '../validation'
+import { Native } from './Native'
+import { Erc20 } from './Erc20'
+import { Erc721 } from './Erc721'
+import { Erc1155 } from './Erc1155'
+import { Cooldown } from './Cooldown'
 
-function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement {
+function MyWill({ nestIndex, setIsOpen }): React.ReactElement {
   const { sdk } = useSafeAppsSDK()
   const [balances] = useSafeBalances(sdk)
+  const [activeStep, setActiveStep] = useState(0)
+  const {
+    control,
+    clearErrors,
+    setError,
+    formState: { errors },
+    getValues,
+  } = useFormContext()
   const { fields: nativeTokenFields, replace } = useFieldArray({
     control,
     name: `wills.${nestIndex}.native`,
@@ -61,349 +72,133 @@ function MyWill({ nestIndex, control, errors, clearErrors }): React.ReactElement
     control,
     name: `wills.${nestIndex}.erc1155s`,
   })
+  const steps = [
+    { id: '0', label: 'Define native token beneficiaries' },
+    { id: '1', label: 'Add ERC20 Tokens and beneficiaries' },
+    { id: '2', label: 'Add Nfts,' },
+    { id: '3', label: 'Add erc1155' },
+    { id: '4', label: 'Options' },
+  ]
+
+  const getStepContent = (step: number) => {
+    switch (step) {
+      case 0:
+        return <Native nativeTokenFields={nativeTokenFields} nestIndex={nestIndex} />
+      case 1:
+        return (
+          <Erc20
+            tokenFields={tokenFields}
+            nestIndex={nestIndex}
+            balances={balances}
+            appendToken={appendToken}
+            removeToken={removeToken}
+          />
+        )
+      case 2:
+        return <Erc721 nftFields={nftFields} nestIndex={nestIndex} appendNft={appendNft} removeNft={removeNft} />
+      case 3:
+        return (
+          <Erc1155
+            erc1155Fields={erc1155Fields}
+            nestIndex={nestIndex}
+            appendErc1155={append1155}
+            removeErc1155={remove1155}
+          />
+        )
+      case 4:
+        return <Cooldown nestIndex={nestIndex} control={control} errors={errors} clearErrors={clearErrors} />
+      default:
+        return 'Unknown step'
+    }
+  }
+  const handleNext = async (step: number): Promise<void> => {
+    const data = getValues()
+    console.log('willdata', data)
+
+    switch (step) {
+      case 0:
+        validateBeneficiaryAddresses(data.wills[nestIndex], setError, nestIndex, 'native')
+        validateDuplicates(data.wills[nestIndex], setError, nestIndex, 'native')
+        validatePercentages(data.wills[nestIndex], setError, nestIndex, 'native')
+
+        console.log('errors', errors)
+        if (Object.keys(errors).length === 0) setActiveStep((prevActiveStep) => prevActiveStep + 1)
+
+        break
+
+      case 1:
+        validateBeneficiaryAddresses(data.wills[nestIndex], setError, nestIndex, 'tokens')
+        validateContractAddresses(data.wills[nestIndex], setError, nestIndex, 'tokens')
+        validateDuplicates(data.wills[nestIndex], setError, nestIndex, 'tokens')
+        validatePercentages(data.wills[nestIndex], setError, nestIndex, 'tokens')
+
+        console.log('errors', errors)
+        if (Object.keys(errors).length === 0) setActiveStep((prevActiveStep) => prevActiveStep + 1)
+        break
+
+      case 2:
+        validateContractAddresses(data.wills[nestIndex], setError, nestIndex, 'nfts')
+        validateBeneficiaryAddresses(data.wills[nestIndex], setError, nestIndex, 'nfts')
+        validateDuplicates(data.wills[nestIndex], setError, nestIndex, 'nfts')
+
+        console.log('errors', errors)
+        if (Object.keys(errors).length === 0) setActiveStep((prevActiveStep) => prevActiveStep + 1)
+        break
+      case 3:
+        validateBeneficiaryAddresses(data.wills[nestIndex], setError, nestIndex, 'erc1155s')
+        validateContractAddresses(data.wills[nestIndex], setError, nestIndex, 'erc1155s')
+        validateDuplicates(data.wills[nestIndex], setError, nestIndex, 'erc1155s')
+        validatePercentages(data.wills[nestIndex], setError, nestIndex, 'erc1155s')
+
+        if (Object.keys(errors).length === 0) setActiveStep((prevActiveStep) => prevActiveStep + 1)
+        break
+
+      case 4:
+        if (Object.keys(errors).length === 0) {
+          setActiveStep((prevActiveStep) => prevActiveStep + 1)
+          setIsOpen(true)
+        }
+        break
+      default:
+        break
+    }
+  }
+
+  const handleBack = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep - 1)
+  }
+
+  const handleReset = () => {
+    setActiveStep(0)
+  }
 
   return (
     <div>
-      {nestIndex > 0 && <Title size="md">{`My Cross Chain Will ${nestIndex}`}</Title>}
-      <Title size="sm">Step 1.- Native Token Beneficiaries</Title>
-      <Row>
-        Define at least one beneficiary for your native tokens (ETH, MATIC). Each beneficiary will recieve the
-        percentage of your tokens entered next to their address. This step is required.
-      </Row>
-      {console.log(nativeTokenFields)}
-      {nativeTokenFields.map((element, index) => {
-        return (
-          <BeneficiaryFields
-            key={element.id}
-            willIndex={nestIndex}
-            tokenType="native"
-            nestIndex={index}
-            control={control}
-            errors={errors}
-            clearErrors={clearErrors}
-          />
-        )
-      })}
+      {nestIndex > 0 && <StyledTitle size="md">{`My Cross Chain Will ${nestIndex}`}</StyledTitle>}
+      {console.log(nestIndex)}
 
-      <Title size="sm">Step 2.- ERC20 Tokens</Title>
-
-      <Row>
-        Define beneficiaries and percentages for your ERC20 tokens. Each beneficiary will recieve the percentage of your
-        tokens entered next to their address. Below is a list of ERC20 tokens we detect in your Safe. They may be added
-        to your will by clicking the "Add Token" button. If you don't see your tokens on the list you may add them
-        manually using the form below. If you have no ERC20 tokens you wish to inherit you may skip this step
-      </Row>
-
-      {nestIndex === 0 && (
-        <>
-          <Title size="sm">Your Tokens</Title>
-          <BalancesTable balances={balances} addToken={appendToken} />
-        </>
-      )}
-      {tokenFields.map((element, index) => {
-        return (
-          <div key={element.id}>
-            <Title size="xs">{`Token ${index + 1}`}</Title>
-            <Row>
-              <Controller
-                control={control}
-                name={`wills.${nestIndex}.tokens.${index}.contractAddress`}
-                rules={{ required: true }}
-                render={({
-                  field: { onChange, onBlur, value, name, ref },
-                  fieldState: { invalid, isTouched, isDirty, error },
-                  formState,
-                }) => (
-                  <TextFieldInput
-                    onBlur={onBlur} // notify when input is touched
-                    onChange={onChange} // send value to hook form
-                    inputRef={ref}
-                    label="contract address"
-                    name={`wills.${nestIndex}.tokens.${index}.contractAddress`}
-                    value={value}
-                    error={
-                      errors &&
-                      errors.wills &&
-                      errors.wills[nestIndex] &&
-                      errors.wills[nestIndex].tokens &&
-                      errors.wills[nestIndex].tokens[index] &&
-                      errors.wills[nestIndex].tokens[index].contractAddress
-                        ? errors.wills[nestIndex].tokens[index].contractAddress.message
-                        : error?.type
-                    }
-                  />
-                )}
-              />
-            </Row>
-            <BeneficiaryFields
-              willIndex={nestIndex}
-              tokenType="tokens"
-              nestIndex={index}
-              control={control}
-              errors={errors}
-              clearErrors={clearErrors}
-            />
-          </div>
-        )
-      })}
-      <Button
-        style={{ marginTop: '1rem' }}
-        size="md"
-        onClick={() => appendToken({ contractAddress: '', beneficiaries: [{ address: '', percentage: null }] })}
-      >
-        Add Token
-      </Button>
-      {tokenFields.length > 0 && (
-        <Button
-          size="md"
-          style={{ marginLeft: '1rem', marginTop: '1rem' }}
-          onClick={() => removeToken(tokenFields.length - 1)}
-        >
-          Remove Token
-        </Button>
-      )}
-      <Title size="sm">Step 3.- ERC721 NFTs</Title>
-      <Row>
-        Define beneficiaries for your NFTs. NFTs have a unique id and may only have one beneficiary each. If you have no
-        ERC721 NFTs you wish to inherit you may skip this step.
-      </Row>
-      {nftFields.map((element, index) => {
-        return (
-          <div key={element.id}>
-            <Title size="xs">{`NFT ${index + 1}`}</Title>
-            <Row>
-              <Controller
-                control={control}
-                name={`wills.${nestIndex}.nfts.${index}.contractAddress`}
-                rules={{ required: true }}
-                render={({
-                  field: { onChange, onBlur, value, name, ref },
-                  fieldState: { invalid, isTouched, isDirty, error },
-                  formState,
-                }) => (
-                  <TextFieldInput
-                    onBlur={onBlur} // notify when input is touched
-                    onChange={onChange} // send value to hook form
-                    inputRef={ref}
-                    label="contract address"
-                    name={`wills.${nestIndex}.nfts.${index}.contractAddress`}
-                    value={value}
-                    error={
-                      errors &&
-                      errors.wills &&
-                      errors.wills[nestIndex] &&
-                      errors.wills[nestIndex].nfts &&
-                      errors.wills[nestIndex].nfts[index] &&
-                      errors.wills[nestIndex].nfts[index].contractAddress
-                        ? errors.wills[nestIndex].nfts[index].contractAddress.message
-                        : error?.type
-                    }
-                  />
-                )}
-              />
-            </Row>
-            <BeneficiaryFields
-              willIndex={nestIndex}
-              tokenType="nfts"
-              nestIndex={index}
-              control={control}
-              errors={errors}
-              clearErrors={clearErrors}
-            />
-          </div>
-        )
-      })}
-      <Button
-        size="md"
-        onClick={() => appendNft({ contractAddress: '', beneficiaries: [{ tokenId: null, beneficiary: '' }] })}
-      >
-        Add NFT
-      </Button>
-      {nftFields.length > 0 && (
-        <Button size="md" style={{ marginLeft: '1rem' }} onClick={() => removeNft(nftFields.length - 1)}>
-          Remove NFT
-        </Button>
-      )}
-      <Title size="sm">Step 4.- ERC1155 Tokens</Title>
-      <Row>
-        Define beneficiaries for your ERC1155 tokens. ERC1155 tokens may be fungible or non fungible. If your ERC1155 is
-        non fungible make sure you define only one beneficiary and that their percentage is set to 100. If you have no
-        ERC1155 tokens you wish to inherit you may skip this step.
-      </Row>
-      {erc1155Fields.map((element, index) => {
-        return (
-          <div key={element.id}>
-            <Title size="xs">{`ERC1155 ${index + 1}`}</Title>
-            <Row>
-              <LeftColumn>
-                <Controller
-                  control={control}
-                  name={`wills.${nestIndex}.erc1155s.${index}.contractAddress`}
-                  rules={{ required: true }}
-                  render={({
-                    field: { onChange, onBlur, value, name, ref },
-                    fieldState: { invalid, isTouched, isDirty, error },
-                    formState,
-                  }) => (
-                    <TextFieldInput
-                      onBlur={onBlur} // notify when input is touched
-                      onChange={onChange} // send value to hook form
-                      inputRef={ref}
-                      label="contract address"
-                      name={`wills.${nestIndex}.erc1155s.${index}.contractAddress`}
-                      error={
-                        errors &&
-                        errors.wills &&
-                        errors.wills[nestIndex] &&
-                        errors.wills[nestIndex].erc1155s &&
-                        errors.wills[nestIndex].erc1155s[index] &&
-                        errors.wills[nestIndex].erc1155s[index].contractAddress
-                          ? errors.wills[nestIndex].erc1155s[index].contractAddress.message
-                          : error?.type
-                      }
-                    />
-                  )}
-                />
-              </LeftColumn>
-              <RightColumn>
-                <Controller
-                  control={control}
-                  name={`wills.${nestIndex}.erc1155s.${index}.tokenId`}
-                  rules={{ required: true }}
-                  render={({
-                    field: { onChange, onBlur, value, name, ref },
-                    fieldState: { invalid, isTouched, isDirty, error },
-                    formState,
-                  }) => (
-                    <TextFieldInput
-                      onBlur={onBlur} // notify when input is touched
-                      onChange={onChange} // send value to hook form
-                      inputRef={ref}
-                      label="token id"
-                      name={`wills.${nestIndex}.erc1155s.${index}.tokenId`}
-                      error={error?.type}
-                    />
-                  )}
-                />
-              </RightColumn>
-            </Row>
-            <BeneficiaryFields
-              willIndex={nestIndex}
-              tokenType="erc1155s"
-              nestIndex={index}
-              control={control}
-              errors={errors}
-              clearErrors={clearErrors}
-            />
-          </div>
-        )
-      })}
-      <Button
-        size="md"
-        onClick={() =>
-          append1155({ contractAddress: '', tokenId: null, beneficiaries: [{ address: '', percentage: null }] })
-        }
-      >
-        Add ERC1155
-      </Button>
-      {erc1155Fields.length > 0 && (
-        <Button size="md" style={{ marginLeft: '1rem' }} onClick={() => remove1155(erc1155Fields.length - 1)}>
-          Remove ERC1155
-        </Button>
-      )}
-      {nestIndex === 0 ? (
-        <>
-          <Title size="sm">Step 5.- Cooldown Period</Title>
-          <Row>Define the period iseconds after an execution request is made where you may still cancel execution.</Row>
+      <StyledStepper orientation="vertical" activeStep={activeStep}>
+        {steps.map((step, index) => (
+          <Step key={step.label}>
+            <StepLabel>{step.label}</StepLabel>
+            <StepContent>{getStepContent(activeStep)}</StepContent>
+          </Step>
+        ))}
+        <div>
           <Row>
-            <LeftColumn>
-              <Controller
-                control={control}
-                name={`wills.${nestIndex}.cooldown`}
-                rules={{ required: true }}
-                render={({
-                  field: { onChange, onBlur, value, name, ref },
-                  fieldState: { invalid, isTouched, isDirty, error },
-                  formState,
-                }) => (
-                  <TextFieldInput
-                    value={value}
-                    onBlur={onBlur} // notify when input is touched
-                    onChange={onChange} // send value to hook form
-                    ref={ref}
-                    label="cooldown period in seconds"
-                    name={`wills.${nestIndex}.cooldown`}
-                    error={error?.type}
-                    showErrorsInTheLabel
-                  />
-                )}
-              />
-            </LeftColumn>
-            <RightColumn />
+            {activeStep !== 0 && (
+              <Button style={{ marginLeft: '2rem' }} disabled={activeStep === 0} onClick={handleBack} size="md">
+                Back
+              </Button>
+            )}
+            {activeStep !== steps.length && (
+              <Button style={{ marginLeft: '1rem' }} size="md" color="primary" onClick={() => handleNext(activeStep)}>
+                {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
+              </Button>
+            )}
           </Row>
-        </>
-      ) : (
-        <>
-          <Row>
-            <Title size="sm">Step 5.- Chain Selector</Title>
-            <Row>Enter the chain selector for the network your additional Safe is deployed on.</Row>
-            <LeftColumn>
-              <Controller
-                control={control}
-                name={`wills.${nestIndex}.chainSelector`}
-                rules={{ required: true }}
-                render={({
-                  field: { onChange, onBlur, value, name, ref },
-                  fieldState: { invalid, isTouched, isDirty, error },
-                  formState,
-                }) => (
-                  <TextFieldInput
-                    value={value}
-                    type="string"
-                    onBlur={onBlur} // notify when input is touched
-                    onChange={onChange} // send value to hook form
-                    ref={ref}
-                    label="destination chain selector"
-                    name={`wills.${nestIndex}.chainSelector`}
-                    error={error?.type}
-                    showErrorsInTheLabel
-                  />
-                )}
-              />
-            </LeftColumn>
-            <RightColumn />
-          </Row>
-          <Row>
-            <Title size="sm">Step 6.- Cross Chain Safe Address</Title>
-            <Row>Enter the address of your additional Safe.</Row>
-            <LeftColumn>
-              <Controller
-                control={control}
-                name={`wills.${nestIndex}.safe`}
-                rules={{ required: true }}
-                render={({
-                  field: { onChange, onBlur, value, name, ref },
-                  fieldState: { invalid, isTouched, isDirty, error },
-                  formState,
-                }) => (
-                  <TextFieldInput
-                    value={value}
-                    type="string"
-                    onBlur={onBlur} // notify when input is touched
-                    onChange={onChange} // send value to hook form
-                    ref={ref}
-                    label="destination chain safe address"
-                    name={`wills.${nestIndex}.safe`}
-                    error={error?.type}
-                    showErrorsInTheLabel
-                  />
-                )}
-              />
-            </LeftColumn>
-            <RightColumn />
-          </Row>
-        </>
-      )}
+        </div>
+      </StyledStepper>
     </div>
   )
 }

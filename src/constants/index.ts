@@ -1,5 +1,5 @@
-export const sepoliaMmAddress = '0x95B6d4852B4798C8D1B0a86Eb86E5FFFb744CA33'
-export const baseGMmAddress = '0xC1567aC7852C902FE9d9fFF196738647d76A86Fd'
+export const sepoliaMmAddress = '0xeaf976021d6185F8F244791ADda713CAA6561d31'
+export const baseGMmAddress = '0xAF3c4D97023859420E150AC15c6a0799fba3248B'
 export const sepoliaChainSelector = '16015286601757825753'
 export const baseGChainSelector = '5790810961207155433'
 export const devUrl = 'http://localhost:1337/api/wills'
