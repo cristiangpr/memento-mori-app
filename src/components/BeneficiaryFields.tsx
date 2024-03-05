@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react'
-import { Controller, useFieldArray } from 'react-hook-form'
+import { Controller, useFieldArray, useFormContext } from 'react-hook-form'
 import { Button, TextFieldInput } from '@gnosis.pm/safe-react-components'
-import { LeftColumn, RightColumn, Row } from './FormElements'
+import { LeftColumn, RightColumn, Row, StyledInput } from './FormElements'
 
-export default function BeneficiaryFields({
-  willIndex,
-  tokenType,
-  nestIndex,
-  control,
-  errors,
-  clearErrors,
-}): React.ReactElement {
+export default function BeneficiaryFields({ willIndex, tokenType, nestIndex }): React.ReactElement {
   const isNative = tokenType === 'nativeToken'
+  const {
+    control,
+    clearErrors,
+    setError,
+    formState: { errors },
+  } = useFormContext()
   const {
     fields: beneficiaryFields,
     remove: removeBeneficiary,
@@ -30,41 +29,35 @@ export default function BeneficiaryFields({
               <Controller
                 control={control}
                 rules={{ required: true }}
-                name={
-                  tokenType === 'nfts'
-                    ? `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.tokenId`
-                    : `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.address.`
-                }
+                name={`wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.address.`}
                 render={({
                   field: { onChange, onBlur, value, name, ref },
                   fieldState: { invalid, isTouched, isDirty, error },
                   formState,
                 }) => (
-                  <TextFieldInput
-                    value={tokenType === 'nfts' ? Number(value) : value}
+                  <StyledInput
+                    autoFocus={tokenType === 'native'}
+                    value={value}
                     onBlur={() => {
                       onBlur()
                       clearErrors()
                     }} // notify when input is touched
+                    onFocus={() => clearErrors()}
                     onChange={onChange} // send value to hook form
                     inputRef={ref}
-                    label={tokenType === 'nfts' ? 'token Id' : 'beneficiary address'}
-                    helperText={
-                      tokenType === 'nfts'
-                        ? ''
-                        : 'Make sure at least one beneficiary is a Safe in order to request execution using this app. Non Safe addresses can request execution by interacting directly with the contract.'
-                    }
-                    name={
-                      tokenType === 'nfts'
-                        ? `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.tokenId`
-                        : `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.address`
-                    }
+                    label="beneficiary address"
+                    helperText="Make sure at least one beneficiary is a Safe in order to request execution using this app. Non Safe addresses can request execution by interacting directly with the contract."
+                    name={`wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.address`}
                     error={
                       errors &&
                       errors.wills &&
                       errors.wills[willIndex] &&
                       errors.wills[willIndex][tokenType] &&
-                      errors.wills[willIndex][tokenType][nestIndex].message
+                      errors.wills[willIndex][tokenType][nestIndex] &&
+                      errors.wills[willIndex][tokenType][nestIndex].beneficiaries &&
+                      errors.wills[willIndex][tokenType][nestIndex].beneficiaries[index] &&
+                      errors.wills[willIndex][tokenType][nestIndex].beneficiaries[index].address &&
+                      errors.wills[willIndex][tokenType][nestIndex].beneficiaries[index].address.message
                     }
                   />
                 )}
@@ -75,7 +68,7 @@ export default function BeneficiaryFields({
                 control={control}
                 name={
                   tokenType === 'nfts'
-                    ? `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.beneficiary`
+                    ? `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.tokenId`
                     : `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.percentage`
                 }
                 render={({
@@ -83,18 +76,20 @@ export default function BeneficiaryFields({
                   fieldState: { invalid, isTouched, isDirty, error },
                   formState,
                 }) => (
-                  <TextFieldInput
+                  <StyledInput
                     value={value}
                     onBlur={() => {
                       onBlur()
                       clearErrors()
+                      console.log('form', formState)
                     }} // notify when input is touched
+                    onFocus={() => clearErrors()}
                     onChange={onChange} // send value to hook form
                     inputRef={ref}
-                    label={tokenType === 'nfts' ? 'beneficiary address' : 'percentage'}
+                    label={tokenType === 'nfts' ? 'token id' : 'percentage'}
                     name={
                       tokenType === 'nfts'
-                        ? `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.address`
+                        ? `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.tokenId`
                         : `wills.${willIndex}.${tokenType}.${nestIndex}.beneficiaries.${index}.percentage`
                     }
                     helperText={tokenType !== 'nfts' && 'Make sure percentages add up to 100'}
@@ -105,7 +100,9 @@ export default function BeneficiaryFields({
                       errors.wills[willIndex][tokenType] &&
                       errors.wills[willIndex][tokenType][nestIndex] &&
                       errors.wills[willIndex][tokenType][nestIndex].beneficiaries &&
-                      errors.wills[willIndex][tokenType][nestIndex].beneficiaries.message
+                      errors.wills[willIndex][tokenType][nestIndex].beneficiaries[index] &&
+                      errors.wills[willIndex][tokenType][nestIndex].beneficiaries[index].percentage &&
+                      errors.wills[willIndex][tokenType][nestIndex].beneficiaries[index].percentage.message
                     }
                   />
                 )}

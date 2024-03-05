@@ -5,8 +5,9 @@ export enum CooldownPeriod {
 }
 export enum TransactionType {
   Create,
-  Request,
+  Update,
   Cancel,
+  Request,
   Execute,
   Delete,
 }
@@ -24,23 +25,26 @@ export type Beneficiary = {
 
 export type NFTBeneficiary = {
   tokenId: number
-  beneficiary: string
+  address: string
 }
 
 export type NFT = {
   contractAddress: string
   beneficiaries: NFTBeneficiary[]
+  name?: string
 }
 
 export type Token = {
   contractAddress: string
   beneficiaries: Beneficiary[]
+  name?: string
 }
 
 export type Erc1155 = {
   contractAddress: string
   tokenId: number
   beneficiaries: Beneficiary[]
+  name?: string
 }
 
 export type NativeToken = {
@@ -105,4 +109,10 @@ export type ContractWill = {
   safe: string
   xChainAddress: string
   baseAddress: string
+}
+export enum TokenType {
+  Native = 'native',
+  Token = 'tokens',
+  Nft = 'nfts',
+  Erc1155 = 'erc1155s',
 }

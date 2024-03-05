@@ -4,7 +4,7 @@
   "description": "A smart will for your Safe",
   "icons": [
     {
-      "src": "logo.svg",
+      "src": "mmlogo.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     },

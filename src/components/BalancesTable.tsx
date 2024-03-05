@@ -2,6 +2,7 @@ import { Button, Table } from '@gnosis.pm/safe-react-components'
 import { TokenBalance, TokenInfo, TokenType } from '@gnosis.pm/safe-apps-sdk'
 import BigNumber from 'bignumber.js'
 import { Token } from '../types'
+import { StyledTable } from './FormElements'
 
 const ethToken: TokenInfo = {
   address: '0x0000000000000',
@@ -23,7 +24,7 @@ const formatFiatValue = (value: string, currency: string): string => {
 function Balances({ balances, addToken }: { balances: TokenBalance[]; addToken: (token: Token) => void }): JSX.Element {
   return (
     <div>
-      <Table
+      <StyledTable
         headers={[
           { id: 'col1', label: 'Asset' },
           { id: 'col2', label: 'Address' },
@@ -51,6 +52,7 @@ function Balances({ balances, addToken }: { balances: TokenBalance[]; addToken: 
                         addToken({
                           contractAddress: token.address,
                           beneficiaries: [{ address: '', percentage: null }],
+                          name: token.name,
                         })
                       }
                     >

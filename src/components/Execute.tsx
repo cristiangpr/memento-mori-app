@@ -1,7 +1,7 @@
 /* eslint-disable no-nested-ternary */
 import React, { useEffect, useState } from 'react'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
-import { Title, Button, TextFieldInput, GenericModal, Loader, Dot, Icon } from '@gnosis.pm/safe-react-components'
+import { Title, Button, TextFieldInput, GenericModal, Loader, Dot, Icon, Text } from '@gnosis.pm/safe-react-components'
 import { BaseContract, ethers, JsonRpcProvider } from 'ethers'
 import {
   executeWill,
@@ -13,9 +13,10 @@ import {
   getWills,
   requestExecution,
   saveWillHash,
+  setRequestTime,
 } from '../utils'
 import { FormTypes, Forms, TransactionStatus, TransactionType } from '../types'
-import { Container, LeftColumn, RightColumn, Row, Will, WillForm } from './FormElements'
+import { Container, LeftColumn, RightColumn, Row, Will, WillForm, StyledInput, StyledTitle } from './FormElements'
 import { sepoliaMmAddress } from '../constants'
 import ABI from '../abis/mementoMori.json'
 import { Modal } from './Modal'
@@ -27,16 +28,21 @@ function Execute(): React.ReactElement {
   const [isExecutable, setIsExecutable] = useState<boolean>(false)
   const [hasSearched, setHasSearched] = useState<boolean>(false)
   const [execTime, setExecTime] = useState<number>()
-  const [isOpen, setIsOpen] = useState<boolean>(false)
-  const [transactionType, setTransactionType] = useState<TransactionType>()
-  const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>(TransactionStatus.Confirm)
+  const [isOpen, setIsOpen] = useState<boolean>(true)
+  const [transactionType, setTransactionType] = useState<TransactionType>(TransactionType.Request)
+  const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>(TransactionStatus.Success)
 
   const { safe, sdk } = useSafeAppsSDK()
 
   const loadData = async (): Promise<void> => {
     const data = await getWills(ownerAddress)
-    const display = getDisplayData(data)
-    setDisplayData(display)
+    console.log('data', data)
+    if (data && data.length > 0) {
+      const display = getDisplayData(data)
+      setDisplayData(display)
+    } else {
+      setDisplayData(undefined)
+    }
     setHasSearched(true)
   }
   const handleRequest = async (): Promise<void> => {
@@ -45,24 +51,24 @@ function Execute(): React.ReactElement {
     setTransactionType(TransactionType.Request)
     setTransactionStatus(TransactionStatus.Executing)
     setIsOpen(true)
-    await requestExecution(ownerAddress, safe)
-    await loadData
-    displayData[0].isActive = true
-    console.log('request', displayData)
+    const requestTime = Math.floor(Date.now() / 1000).toString()
     const formattedData = []
     for (let i = 0; i < displayData.length; i += 1) {
-      const formattedWill = formatDataForContract(displayData[i], safe.safeAddress)
+      const formattedWill = formatDataForContract(displayData[i], safe.safeAddress, requestTime)
       formattedData.push(formattedWill)
     }
-    console.log('request', formattedData)
-    await saveWillHash(formattedData, sdk, safe)
-
-    contract.on('WillCreated', (address) => {
+    await requestExecution(formattedData, sdk)
+    contract.on('ExecutionRequested', async (address) => {
       if (ownerAddress === address) {
+        await setRequestTime(ownerAddress, safe, requestTime)
         setTransactionStatus(TransactionStatus.Success)
         setIsOpen(true)
       }
     })
+
+    await loadData
+    displayData[0].isActive = true
+    displayData[0].requestTime = requestTime
   }
   const handleExecute = async () => {
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
@@ -104,18 +110,18 @@ function Execute(): React.ReactElement {
 
   return (
     <Container>
-      {isOpen && (
-        <Modal
-          transactionStatus={transactionStatus}
-          transactionType={transactionType}
-          handleClose={handleClose}
-          execTime={execTime}
-        />
-      )}
-      <Title size="lg">Execute</Title>
-      <Title size="sm">Enter owner address to find will and request execution</Title>
+      <Modal
+        isOpen={isOpen}
+        transactionStatus={transactionStatus}
+        transactionType={transactionType}
+        handleClose={handleClose}
+        execTime={execTime}
+      />
+
+      <StyledTitle size="lg">Execute</StyledTitle>
+      <StyledTitle size="sm">Enter owner address to find will and request execution</StyledTitle>
       <Row style={{ width: '50%', padding: '1rem' }}>
-        <TextFieldInput
+        <StyledInput
           value={ownerAddress}
           onChange={(e) => setOwnerAddress(e.target.value)}
           name="ownerAddress"
@@ -132,30 +138,30 @@ function Execute(): React.ReactElement {
           {displayData.map((will, index) => {
             return (
               <>
-                <Title size="lg">{`Will ${index + 1}`}</Title>
+                <StyledTitle size="lg">{`Will ${index + 1}`}</StyledTitle>
                 <Will>
                   {console.log('will', will)}
-
-                  <Title size="md">Cooldown Period</Title>
-                  <div>{will.cooldown.toString()}</div>
-                  <Title size="md">Chain Selector</Title>
-                  <div>{will.chainSelector.toString()}</div>
-                  <Title size="md">Native Token</Title>
+                  {console.log('request', displayData)}
+                  <StyledTitle size="md">Cooldown Period</StyledTitle>
+                  <Text size="sm">{will.cooldown.toString()}</Text>
+                  <StyledTitle size="md">Chain Selector</StyledTitle>
+                  <Text size="sm">{will.chainSelector.toString()}</Text>
+                  <StyledTitle size="md">Native Token</StyledTitle>
                   {will.native[0].beneficiaries.map((element) => {
                     return (
                       <Row>
                         <LeftColumn>
-                          <Title size="sm">Beneficiary</Title>
-                          <div>{element.address}</div>
+                          <StyledTitle size="sm">Beneficiary</StyledTitle>
+                          <Text size="sm">{element.address}</Text>
                         </LeftColumn>
                         <RightColumn>
-                          <Title size="sm">Percentage</Title>
-                          <div>{element.percentage.toString()}</div>
+                          <StyledTitle size="sm">Percentage</StyledTitle>
+                          <Text size="sm">{element.percentage.toString()}</Text>
                         </RightColumn>
                       </Row>
                     )
                   })}
-                  {will.tokens.length > 0 ? <Title size="md">ERC20 Tokens</Title> : null}
+                  {will.tokens.length > 0 ? <StyledTitle size="md">ERC20 Tokens</StyledTitle> : null}
 
                   {will.tokens?.map((token, i) => {
                     // eslint-disable-next-line no-lone-blocks
@@ -165,21 +171,21 @@ function Execute(): React.ReactElement {
                     return (
                       <div style={{ width: '100%' }}>
                         <Row>
-                          <Title size="sm">TokenAddress </Title>
+                          <StyledTitle size="sm">TokenAddress </StyledTitle>
                         </Row>
                         <Row>
-                          <div>{token.contractAddress}</div>
+                          <Text size="sm">{token.contractAddress}</Text>
                         </Row>
-                        {token.beneficiaries.map((item) => {
+                        {token.beneficiaries.map((element) => {
                           return (
                             <Row>
                               <LeftColumn>
-                                <Title size="sm">Beneficiary</Title>
-                                {item.address}
+                                <StyledTitle size="sm">Beneficiary</StyledTitle>
+                                <Text size="sm">{element.address}</Text>
                               </LeftColumn>
                               <LeftColumn>
-                                <Title size="sm">Percentage</Title>
-                                {item.percentage.toString()}
+                                <StyledTitle size="sm">Percentage</StyledTitle>
+                                <Text size="sm">{element.percentage.toString()}</Text>
                               </LeftColumn>
                             </Row>
                           )
@@ -187,26 +193,26 @@ function Execute(): React.ReactElement {
                       </div>
                     )
                   })}
-                  {will.nfts.length > 0 ? <Title size="md">ERC721 NFTs</Title> : null}
+                  {will.nfts.length > 0 ? <StyledTitle size="md">ERC721 NFTs</StyledTitle> : null}
                   {will.nfts?.map((nft, i) => {
                     return (
                       <div style={{ width: '100%' }}>
                         <Row>
-                          <Title size="sm">TokenAddress </Title>
+                          <StyledTitle size="sm">TokenAddress </StyledTitle>
                         </Row>
                         <Row>
-                          <div>{nft.contractAddress}</div>
+                          <Text size="sm">{nft.contractAddress}</Text>
                         </Row>
-                        {nft.beneficiaries.map((item) => {
+                        {nft.beneficiaries.map((element) => {
                           return (
                             <Row>
                               <LeftColumn>
-                                <Title size="sm">Token Id</Title>
-                                {item.tokenId.toString()}
+                                <StyledTitle size="sm">Token Id</StyledTitle>
+                                <Text size="sm">{element.tokenId.toString()}</Text>
                               </LeftColumn>
                               <RightColumn>
-                                <Title size="sm">Beneficiary</Title>
-                                {item.beneficiary}
+                                <StyledTitle size="sm">Beneficiary</StyledTitle>
+                                <Text size="sm">{element.address}</Text>
                               </RightColumn>
                             </Row>
                           )
@@ -214,30 +220,29 @@ function Execute(): React.ReactElement {
                       </div>
                     )
                   })}
-                  {will.erc1155s.length > 0 ? <Title size="md">ERC1155 Tokens</Title> : null}
+                  {will.erc1155s.length > 0 ? <StyledTitle size="md">ERC1155 Tokens</StyledTitle> : null}
                   {will.erc1155s?.map((erc1155, i) => {
                     return (
                       <div style={{ width: '100%' }}>
                         <Row>
                           <LeftColumn>
-                            <Title size="sm">Token Address</Title>
-                            {erc1155.contractAddress}
+                            <StyledTitle size="sm">Token Address</StyledTitle>
+                            <Text size="sm">{erc1155.contractAddress}</Text>
                           </LeftColumn>
                           <RightColumn>
-                            <Title size="sm">Token Id</Title>
-                            {erc1155.tokenId.toString()}
+                            <StyledTitle size="sm">Token Id</StyledTitle>
+                            <Text size="sm">{erc1155.tokenId.toString()}</Text>
                           </RightColumn>
                         </Row>
-                        {erc1155.beneficiaries.map((item) => {
+                        {erc1155.beneficiaries.map((element) => {
                           return (
                             <Row>
                               <LeftColumn>
-                                <Title size="sm">Beneficiary</Title>
-                                {item.address}
+                                <StyledTitle size="sm">Beneficiary</StyledTitle>
+                                <Text size="sm">{element.address}</Text>
                               </LeftColumn>
                               <RightColumn>
-                                <Title size="sm">Percentage</Title>
-                                {item.percentage.toString()}
+                                <Text size="sm">{element.percentage.toString()}</Text>
                               </RightColumn>
                             </Row>
                           )
@@ -252,27 +257,27 @@ function Execute(): React.ReactElement {
 
           {isExecutor && !isExecutable && (
             <div style={{ padding: '20px' }}>
-              <Button size="md" color="secondary" onClick={() => handleRequest()}>
+              <Button size="md" color="primary" onClick={() => handleRequest()}>
                 Request Execution
               </Button>
             </div>
           )}
           {execTime && (
             <div style={{ padding: '20px' }}>
-              <div>Will executable after {new Date(execTime * 1000).toLocaleString()}</div>
+              <Text size="sm">Will executable after {new Date(execTime * 1000).toLocaleString()}</Text>
               {console.log('exec', execTime)}
             </div>
           )}
           {isExecutable && (
             <div style={{ padding: '20px' }}>
-              <Button size="md" color="secondary" onClick={() => handleExecute()}>
+              <Button size="md" color="primary" onClick={() => handleExecute()}>
                 Execute Will
               </Button>
             </div>
           )}
         </>
       ) : hasSearched ? (
-        <Title size="md">Will not found</Title>
+        <StyledTitle size="md">Will not found</StyledTitle>
       ) : null}
     </Container>
   )

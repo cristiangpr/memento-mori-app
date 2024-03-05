@@ -8,11 +8,24 @@ import { BaseTransaction, SendTransactionsParams, SendTransactionsResponse } fro
 import SafeAppsSDK from '@safe-global/safe-apps-sdk/dist/src/sdk'
 import { parse, sep } from 'path'
 import Safe from '@safe-global/protocol-kit'
+import { log } from 'console'
 import ABI from './abis/mementoMori.json'
-import { NFT, UserInfo, Token, Erc1155, NativeToken, FormTypes, Forms, Form, ContractWill } from './types'
-import { prodUrl, sepoliaMmAddress } from './constants'
+import {
+  NFT,
+  UserInfo,
+  Token,
+  Erc1155,
+  NativeToken,
+  FormTypes,
+  Forms,
+  Form,
+  ContractWill,
+  TransactionType,
+} from './types'
+import { devUrl, prodUrl, sepoliaMmAddress } from './constants'
 
 export const saveWill = async (data: FormTypes[]): Promise<void> => {
+  console.log('savedata', data)
   for (let i = 0; i < data.length; i += 1) {
     const res = await fetch(
       `${prodUrl}?filters[baseAddress][$eq]=${data[i].baseAddress}&filters[chainSelector][$eq]=${data[i].chainSelector}`,
@@ -42,10 +55,11 @@ export const saveWillHash = async (
   wills: ContractWill[],
   sdk: SafeAppsSDK,
   safe: { safeAddress: any; chainId?: number; threshold?: number; owners?: string[]; isReadOnly?: boolean },
+  transactionType: TransactionType,
 ): Promise<void> => {
   console.log('hash', wills)
   const IMementoMori = new Interface(ABI)
-  const data = IMementoMori.encodeFunctionData('saveWillHash', [wills])
+  const data = IMementoMori.encodeFunctionData('saveWillHash', [wills, transactionType])
   const safeSaveWillHashTransaction: BaseTransaction = {
     to: sepoliaMmAddress,
     value: '10000000',
@@ -60,6 +74,7 @@ export const saveWillHash = async (
   }
   const isEnabledData: string = await sdk.eth.call([isModuleEnabledParams])
   const isEnabled = isEnabledData !== '0x0000000000000000000000000000000000000000000000000000000000000000'
+  console.log('enabled', isEnabled)
   if (isEnabled) {
     const safeCreateWillTransaction = await sdk.txs.send({
       txs: [safeSaveWillHashTransaction],
@@ -127,8 +142,8 @@ export const formatDataForApi = (data: FormTypes, ownerAddress: string): FormTyp
     const nftBeneficiaries = []
     const nftIds = []
     for (let j = 0; j < newData.nfts[i].beneficiaries.length; j += 1) {
-      nftBeneficiaries.push(newData.nfts[i].beneficiaries[j].beneficiary)
-      executors.push(newData.nfts[i].beneficiaries[j].beneficiary)
+      nftBeneficiaries.push(newData.nfts[i].beneficiaries[j].address)
+      executors.push(newData.nfts[i].beneficiaries[j].address)
 
       nftIds.push(newData.nfts[i].beneficiaries[j].tokenId)
     }
@@ -161,7 +176,7 @@ export const formatDataForApi = (data: FormTypes, ownerAddress: string): FormTyp
   return newData
 }
 
-export const formatDataForContract = (data: FormTypes, ownerAddress: string): ContractWill => {
+export const formatDataForContract = (data: FormTypes, ownerAddress: string, requestTime?: string): ContractWill => {
   const newData = JSON.parse(JSON.stringify(data))
   const executors = []
   const nativeBeneficiaries = []
@@ -187,6 +202,9 @@ export const formatDataForContract = (data: FormTypes, ownerAddress: string): Co
     newData.tokens[i].beneficiaries = tokenBeneficiaries
 
     newData.tokens[i].percentages = tokenPercentages
+    if (newData.tokens[i].name) {
+      delete newData.tokens[i].name
+    }
   }
 
   if (!newData.nfts[0]) {
@@ -196,14 +214,17 @@ export const formatDataForContract = (data: FormTypes, ownerAddress: string): Co
     const nftBeneficiaries = []
     const nftIds = []
     for (let j = 0; j < newData.nfts[i].beneficiaries.length; j += 1) {
-      nftBeneficiaries.push(newData.nfts[i].beneficiaries[j].beneficiary)
-      executors.push(newData.nfts[i].beneficiaries[j].beneficiary)
+      nftBeneficiaries.push(newData.nfts[i].beneficiaries[j].address)
+      executors.push(newData.nfts[i].beneficiaries[j].address)
 
       nftIds.push(newData.nfts[i].beneficiaries[j].tokenId)
     }
     newData.nfts[i].beneficiaries = nftBeneficiaries
 
     newData.nfts[i].tokenIds = nftIds
+    if (newData.nfts[i].name) {
+      delete newData.nfts[i].name
+    }
   }
   if (!newData.erc1155s[0]) {
     newData.erc1155s = []
@@ -219,6 +240,9 @@ export const formatDataForContract = (data: FormTypes, ownerAddress: string): Co
     newData.erc1155s[i].beneficiaries = erc1155Beneficiaries
 
     newData.erc1155s[i].percentages = erc1155Percentages
+    if (newData.erc1155s[i].name) {
+      delete newData.erc1155s[i].name
+    }
   }
   const uniqueExecutors = [...new Set(executors)]
   uniqueExecutors.push(ownerAddress)
@@ -228,6 +252,13 @@ export const formatDataForContract = (data: FormTypes, ownerAddress: string): Co
   newData.executors = filteredExecutors
   delete newData.executed
   delete newData.id
+  if (requestTime && requestTime !== '0') {
+    newData.isActive = true
+    newData.requestTime = requestTime
+  } else {
+    newData.isActive = false
+    newData.requestTime = requestTime
+  }
 
   return newData
 }
@@ -250,7 +281,7 @@ export const getDisplayData = (data: any[]): FormTypes[] => {
       safe,
       executed,
     } = data[h].attributes
-    const id = data[h]
+    const id = data[h].id
 
     const nativeBeneficiaries = []
     for (let i = 0; i < native[0].beneficiaries.length; i += 1) {
@@ -262,9 +293,12 @@ export const getDisplayData = (data: any[]): FormTypes[] => {
     const tokensArr = []
     if (tokens.length > 0) {
       for (let i = 0; i < tokens.length; i += 1) {
-        const token = { contractAddress: '', beneficiaries: [] }
+        const token = { contractAddress: '', beneficiaries: [], name: '' }
 
         token.contractAddress = tokens[i].contractAddress
+        if (tokens[i].name) {
+          token.name = tokens[i].name
+        }
         for (let j = 0; j < tokens[i].beneficiaries.length; j += 1) {
           const tokenBeneficiary = { address: '', percentage: null }
 
@@ -280,11 +314,11 @@ export const getDisplayData = (data: any[]): FormTypes[] => {
     if (nfts.length > 0) {
       for (let i = 0; i < nfts.length; i += 1) {
         const nft = { contractAddress: '', beneficiaries: [] }
-        const nftBeneficiary = { tokenId: null, beneficiary: '' }
+        const nftBeneficiary = { tokenId: null, address: '' }
         nft.contractAddress = nfts[i].contractAddress
         for (let j = 0; j < nfts[i][1].length; j += 1) {
           nftBeneficiary.tokenId = nfts[i].tokenIds[j]
-          nftBeneficiary.beneficiary = nfts[i].beneficiaries[j]
+          nftBeneficiary.address = nfts[i].beneficiaries[j]
           nft.beneficiaries.push(nftBeneficiary)
         }
         nftsArr.push(nft)
@@ -325,6 +359,7 @@ export const getDisplayData = (data: any[]): FormTypes[] => {
     }
     result.push(will)
   }
+  console.log('res', result)
   return result
 }
 
@@ -344,8 +379,8 @@ export const executeWill = async (sdk: SafeAppsSDK, wills: FormTypes[]): Promise
   const hash = response.safeTxHash
   return hash
 }
-// TODO: implement in contract
-export const deleteWill = async (data: FormTypes[], sdk: SafeAppsSDK, safe): Promise<void> => {
+
+export const deleteWill = async (data: FormTypes[], safe): Promise<void> => {
   for (let i = 0; i < data.length; i += 1) {
     const res = await fetch(
       `${prodUrl}?filters[baseAddress][$eq]=${safe.safeAddress}}&filters[chainSelector][$eq]=${data[i].chainSelector}`,
@@ -360,20 +395,22 @@ export const deleteWill = async (data: FormTypes[], sdk: SafeAppsSDK, safe): Pro
       headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
     })
   }
+}
+export const deleteWillHash = async (sdk: SafeAppsSDK): Promise<void> => {
   const mmInterface = new Interface(ABI)
-  const executeData = mmInterface.encodeFunctionData('deleteWill', [safe.safeAddress])
-  const executeWillTransaction: BaseTransaction = {
+  const deleteData = mmInterface.encodeFunctionData('deleteWill')
+  const deleteWillTransaction: BaseTransaction = {
     to: sepoliaMmAddress,
     value: '0',
-    data: executeData,
+    data: deleteData,
   }
   const params = { safeTxGas: 500000000 }
   await sdk.txs.send({
-    txs: [executeWillTransaction],
+    txs: [deleteWillTransaction],
   })
 }
 
-export const requestExecution = async (owner: string, safe): Promise<boolean> => {
+export const setRequestTime = async (owner: string, safe, requestTime: string): Promise<boolean> => {
   const response = await fetch(`${prodUrl}?filters[baseAddress][$eq]=${owner}&sort=id`, {
     method: 'GET',
     headers: { Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`, 'Content-Type': 'application/json' },
@@ -388,13 +425,27 @@ export const requestExecution = async (owner: string, safe): Promise<boolean> =>
             Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ data: { isActive: true, requestTime: Math.floor(Date.now() / 1000).toString() } }),
+          body: JSON.stringify({ data: { isActive: true, requestTime } }),
         })
         return true
       }
     }
   }
   return false
+}
+
+export const requestExecution = async (wills: ContractWill[], sdk: SafeAppsSDK): Promise<void> => {
+  const mmInterface = new Interface(ABI)
+  const requestData = mmInterface.encodeFunctionData('requestExecution', [wills])
+  const requestTransaction: BaseTransaction = {
+    to: sepoliaMmAddress,
+    value: '0',
+    data: requestData,
+  }
+  const params = { safeTxGas: 500000000 }
+  await sdk.txs.send({
+    txs: [requestTransaction],
+  })
 }
 
 export const cancelExecution = async (safe): Promise<boolean> => {
@@ -411,7 +462,7 @@ export const cancelExecution = async (safe): Promise<boolean> => {
           Authorization: `bearer ${process.env.REACT_APP_STRAPI_TOKEN}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ data: { isActive: false } }),
+        body: JSON.stringify({ data: { isActive: false, requestTime: '0' } }),
       })
       return true
     }

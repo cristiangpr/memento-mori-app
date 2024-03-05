@@ -2,18 +2,17 @@ import { NavLink as Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 export const Nav = styled.nav`
-  background: rgb(0, 140, 115);
+  background: rgb(31 41 55);
   height: 85px;
   display: flex;
-  justify-content: space-between;
-  padding: 0.2rem calc((100vw - 1000px) / 2);
-  z-index: 12;
+  justify-content: flex-start;
+
   /* Third Nav */
   /* justify-content: flex-start; */
 `
 
 export const NavLink = styled(Link)`
-  color: #000000;;
+  color: rgb(255, 255, 255);
   display: flex;
   align-items: center;
   text-decoration: none;
@@ -23,7 +22,10 @@ export const NavLink = styled(Link)`
   font-family: Averta, Roboto, "Helvetica Neue", Arial, "Segoe UI", Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", -apple-system, BlinkMacSystemFont, sans-serif
   cursor: pointer;
   &.active {
-    color:rgb(255, 255, 255);
+     color:  ${(props) => props.theme.colors.primary};
+  }
+  &.hover {
+    color: rgb(81, 218, 207)
   }
 `
 
