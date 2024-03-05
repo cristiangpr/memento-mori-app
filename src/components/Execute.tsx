@@ -13,6 +13,7 @@ import {
   getWills,
   requestExecution,
   saveWillHash,
+  setRequestTime,
 } from '../utils'
 import { FormTypes, Forms, TransactionStatus, TransactionType } from '../types'
 import { Container, LeftColumn, RightColumn, Row, Will, WillForm, StyledInput, StyledTitle } from './FormElements'
@@ -27,16 +28,21 @@ function Execute(): React.ReactElement {
   const [isExecutable, setIsExecutable] = useState<boolean>(false)
   const [hasSearched, setHasSearched] = useState<boolean>(false)
   const [execTime, setExecTime] = useState<number>()
-  const [isOpen, setIsOpen] = useState<boolean>(false)
-  const [transactionType, setTransactionType] = useState<TransactionType>()
-  const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>(TransactionStatus.Confirm)
+  const [isOpen, setIsOpen] = useState<boolean>(true)
+  const [transactionType, setTransactionType] = useState<TransactionType>(TransactionType.Request)
+  const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>(TransactionStatus.Success)
 
   const { safe, sdk } = useSafeAppsSDK()
 
   const loadData = async (): Promise<void> => {
     const data = await getWills(ownerAddress)
-    const display = getDisplayData(data)
-    setDisplayData(display)
+    console.log('data', data)
+    if (data && data.length > 0) {
+      const display = getDisplayData(data)
+      setDisplayData(display)
+    } else {
+      setDisplayData(undefined)
+    }
     setHasSearched(true)
   }
   const handleRequest = async (): Promise<void> => {
@@ -45,24 +51,24 @@ function Execute(): React.ReactElement {
     setTransactionType(TransactionType.Request)
     setTransactionStatus(TransactionStatus.Executing)
     setIsOpen(true)
-    await requestExecution(ownerAddress, safe)
-    await loadData
-    displayData[0].isActive = true
-    console.log('request', displayData)
+    const requestTime = Math.floor(Date.now() / 1000).toString()
     const formattedData = []
     for (let i = 0; i < displayData.length; i += 1) {
-      const formattedWill = formatDataForContract(displayData[i], safe.safeAddress)
+      const formattedWill = formatDataForContract(displayData[i], safe.safeAddress, requestTime)
       formattedData.push(formattedWill)
     }
-    console.log('request', formattedData)
-    await saveWillHash(formattedData, sdk, safe, transactionType)
-
-    contract.on('WillCreated', (address) => {
+    await requestExecution(formattedData, sdk)
+    contract.on('ExecutionRequested', async (address) => {
       if (ownerAddress === address) {
+        await setRequestTime(ownerAddress, safe, requestTime)
         setTransactionStatus(TransactionStatus.Success)
         setIsOpen(true)
       }
     })
+
+    await loadData
+    displayData[0].isActive = true
+    displayData[0].requestTime = requestTime
   }
   const handleExecute = async () => {
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
@@ -135,7 +141,7 @@ function Execute(): React.ReactElement {
                 <StyledTitle size="lg">{`Will ${index + 1}`}</StyledTitle>
                 <Will>
                   {console.log('will', will)}
-
+                  {console.log('request', displayData)}
                   <StyledTitle size="md">Cooldown Period</StyledTitle>
                   <Text size="sm">{will.cooldown.toString()}</Text>
                   <StyledTitle size="md">Chain Selector</StyledTitle>
@@ -170,16 +176,16 @@ function Execute(): React.ReactElement {
                         <Row>
                           <Text size="sm">{token.contractAddress}</Text>
                         </Row>
-                        {token.beneficiaries.map((item) => {
+                        {token.beneficiaries.map((element) => {
                           return (
                             <Row>
                               <LeftColumn>
                                 <StyledTitle size="sm">Beneficiary</StyledTitle>
-                                {item.address}
+                                <Text size="sm">{element.address}</Text>
                               </LeftColumn>
                               <LeftColumn>
                                 <StyledTitle size="sm">Percentage</StyledTitle>
-                                {item.percentage.toString()}
+                                <Text size="sm">{element.percentage.toString()}</Text>
                               </LeftColumn>
                             </Row>
                           )
@@ -197,16 +203,16 @@ function Execute(): React.ReactElement {
                         <Row>
                           <Text size="sm">{nft.contractAddress}</Text>
                         </Row>
-                        {nft.beneficiaries.map((item) => {
+                        {nft.beneficiaries.map((element) => {
                           return (
                             <Row>
                               <LeftColumn>
                                 <StyledTitle size="sm">Token Id</StyledTitle>
-                                {item.tokenId.toString()}
+                                <Text size="sm">{element.tokenId.toString()}</Text>
                               </LeftColumn>
                               <RightColumn>
                                 <StyledTitle size="sm">Beneficiary</StyledTitle>
-                                {item.address}
+                                <Text size="sm">{element.address}</Text>
                               </RightColumn>
                             </Row>
                           )
@@ -221,23 +227,22 @@ function Execute(): React.ReactElement {
                         <Row>
                           <LeftColumn>
                             <StyledTitle size="sm">Token Address</StyledTitle>
-                            {erc1155.contractAddress}
+                            <Text size="sm">{erc1155.contractAddress}</Text>
                           </LeftColumn>
                           <RightColumn>
                             <StyledTitle size="sm">Token Id</StyledTitle>
-                            {erc1155.tokenId.toString()}
+                            <Text size="sm">{erc1155.tokenId.toString()}</Text>
                           </RightColumn>
                         </Row>
-                        {erc1155.beneficiaries.map((item) => {
+                        {erc1155.beneficiaries.map((element) => {
                           return (
                             <Row>
                               <LeftColumn>
                                 <StyledTitle size="sm">Beneficiary</StyledTitle>
-                                {item.address}
+                                <Text size="sm">{element.address}</Text>
                               </LeftColumn>
                               <RightColumn>
-                                <StyledTitle size="sm">Percentage</StyledTitle>
-                                <Text size="sm">{item.percentage.toString()}</Text>
+                                <Text size="sm">{element.percentage.toString()}</Text>
                               </RightColumn>
                             </Row>
                           )
@@ -259,7 +264,7 @@ function Execute(): React.ReactElement {
           )}
           {execTime && (
             <div style={{ padding: '20px' }}>
-              <div>Will executable after {new Date(execTime * 1000).toLocaleString()}</div>
+              <Text size="sm">Will executable after {new Date(execTime * 1000).toLocaleString()}</Text>
               {console.log('exec', execTime)}
             </div>
           )}

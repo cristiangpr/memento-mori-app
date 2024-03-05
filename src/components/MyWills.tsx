@@ -11,6 +11,7 @@ import { ContractWill, Form, FormTypes, Forms, TransactionType, TransactionStatu
 import {
   cancelExecution,
   deleteWill,
+  deleteWillHash,
   executeWill,
   formatDataForApi,
   formatDataForContract,
@@ -24,7 +25,7 @@ import {
 import { Container, Row, LeftColumn, RightColumn, WillForm, StyledTitle } from './FormElements'
 // eslint-disable-next-line import/no-cycle
 import BeneficiaryFields from './BeneficiaryFields'
-import { baseGChainSelector, baseGMmAddress, sepoliaChainSelector, sepoliaMmAddress } from '../constants'
+import { baseSepoliaChainSelector, baseSepoliaMmAddress, sepoliaChainSelector, sepoliaMmAddress } from '../constants'
 import ABI from '../abis/mementoMori.json'
 
 import MyWill from './MyWill'
@@ -40,6 +41,7 @@ function MyWills(): React.ReactElement {
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const [transactionType, setTransactionType] = useState<TransactionType>(TransactionType.Create)
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>(TransactionStatus.Confirm)
+  const [isReady, setIsReady] = useState<boolean>(false)
 
   const {
     register,
@@ -66,13 +68,13 @@ function MyWills(): React.ReactElement {
     const loadData = async () => {
       const data = await getWills(safe.safeAddress)
       console.log('data', data)
-      if (data.length > 0) {
+      if (data && Object.keys(data).length > 0) {
         const display = getDisplayData(data)
         setDisplayData(display)
         setHasWill(true)
-
         if (displayData && displayData[0].isActive) {
           setExecTime(getExecTime(displayData[0]))
+
           if (getExecTime(displayData[0]) <= Date.now()) {
             setIsExecutable(true)
           }
@@ -133,7 +135,13 @@ function MyWills(): React.ReactElement {
     }
   }, [reset, hasWill, displayData, safe.safeAddress, appendWill])
 
-  const onSubmit = async (data: Forms): Promise<void> => {
+  const onSubmit = () => {
+    setIsOpen(true)
+    setTransactionStatus(TransactionStatus.Confirm)
+  }
+
+  const handleSave = async (data: Forms): Promise<void> => {
+    console.log('save')
     if (hasWill) {
       setTransactionType(TransactionType.Update)
     } else {
@@ -157,29 +165,41 @@ function MyWills(): React.ReactElement {
         contractData.push(contractWill)
       }
 
-      await saveWill(apiData)
-
       await saveWillHash(contractData, sdk, safe, transactionType)
-
-      contract.on('WillCreated', (ownerAddress) => {
-        if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
-          setTransactionStatus(TransactionStatus.Success)
-          setIsOpen(true)
-        }
-      })
+      if (transactionType === TransactionType.Create) {
+        contract.on('WillCreated', async (ownerAddress) => {
+          if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
+            await saveWill(apiData)
+            setTransactionStatus(TransactionStatus.Success)
+            setIsOpen(true)
+          }
+        })
+      } else {
+        contract.on('WillUpdated', async (ownerAddress) => {
+          console.log('event')
+          if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
+            await saveWill(apiData)
+            setTransactionStatus(TransactionStatus.Success)
+            setIsOpen(true)
+          }
+        })
+      }
     }
   }
   const handleDelete = async (): Promise<void> => {
+    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     setTransactionType(TransactionType.Delete)
     setTransactionStatus(TransactionStatus.Executing)
     setIsOpen(true)
-    await deleteWill(displayData, sdk, safe)
-    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
-    const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
-    contract.on('WillDeleted', (ownerAddress) => {
+    await deleteWillHash(sdk)
+
+    contract.on('WillDeleted', async (ownerAddress) => {
       if (ownerAddress === safe.safeAddress) {
+        await deleteWill(displayData, safe)
         setTransactionStatus(TransactionStatus.Success)
         setIsOpen(true)
+        setHasWill(false)
         reset({
           wills: [
             {
@@ -209,16 +229,24 @@ function MyWills(): React.ReactElement {
   }
 
   const handleCancel = async (): Promise<void> => {
+    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+    const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     setTransactionType(TransactionType.Cancel)
     setTransactionStatus(TransactionStatus.Executing)
     setIsOpen(true)
-    await cancelExecution(sdk)
-    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
-    const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
-    contract.on('ExecutionCancelled', (ownerAddress) => {
+    const contractData = []
+    for (let i = 0; i < displayData.length; i += 1) {
+      const contractWill = formatDataForContract(displayData[i], safe.safeAddress, '0')
+      contractData.push(contractWill)
+    }
+
+    await saveWillHash(contractData, sdk, safe, transactionType)
+    contract.on('ExecutionCancelled', async (ownerAddress) => {
       if (ownerAddress === safe.safeAddress) {
+        await cancelExecution(sdk)
         setTransactionStatus(TransactionStatus.Success)
         setIsOpen(true)
+        setIsExecutable(false)
       }
     })
   }
@@ -260,7 +288,7 @@ function MyWills(): React.ReactElement {
           handleClose={handleClose}
           hasWill={hasWill}
           execTime={execTime}
-          handleCreate={onSubmit}
+          handleSave={handleSubmit(handleSave)}
         />
       </div>
 
@@ -277,10 +305,18 @@ function MyWills(): React.ReactElement {
         {willFields.map((element, index) => {
           console.log('willfields', willFields)
 
-          return <MyWill key={element.id} nestIndex={index} setIsOpen={setIsOpen} />
+          return (
+            <MyWill
+              key={element.id}
+              nestIndex={index}
+              setIsOpen={setIsOpen}
+              setIsReady={setIsReady}
+              hasWill={hasWill}
+            />
+          )
         })}
         <Row style={{ justifyContent: 'center' }}>
-          <Button size="md" type="submit">
+          <Button size="md" type="submit" disabled={!isReady}>
             {hasWill ? 'Update Will' : 'Create Will'}
           </Button>
         </Row>
@@ -302,10 +338,10 @@ function MyWills(): React.ReactElement {
                 [Form.Tokens]: [],
                 [Form.NFTS]: [],
                 [Form.Erc1155s]: [],
-                [Form.ChainSelector]: baseGChainSelector,
+                [Form.ChainSelector]: baseSepoliaChainSelector,
                 [Form.Safe]: '',
                 [Form.BaseAddress]: safe.safeAddress,
-                [Form.XChainAddress]: baseGMmAddress,
+                [Form.XChainAddress]: baseSepoliaMmAddress,
                 [Form.Executed]: false,
               })
             }
@@ -333,10 +369,10 @@ function MyWills(): React.ReactElement {
         {execTime && (
           <>
             <Row style={{ justifyContent: 'center' }}>
-              <div>Will executable after {new Date(execTime * 1000).toLocaleString()}</div>
+              <Text size="sm">Will executable after {new Date(execTime * 1000).toLocaleString()}</Text>
             </Row>
             <Row style={{ justifyContent: 'center' }}>
-              <Button size="md" onClick={() => handleCancel()}>
+              <Button size="md" color="error" onClick={() => handleCancel()}>
                 Cancel Execution
               </Button>
             </Row>

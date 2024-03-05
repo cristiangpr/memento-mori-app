@@ -73,6 +73,9 @@ export const StyledInput = styled(TextFieldInput)`
     .MuiFormHelperText-root.MuiFormHelperText-contained {
       color: ${(props) => props.theme.colors.white};
     }
+    .MuiFormHelperText-root.Mui-error {
+      color: ${(props) => props.theme.colors.error};
+    }
     .MuiFormLabel-root.Mui-focused {
       color: ${(props) => props.theme.colors.primary};
     }
@@ -96,9 +99,11 @@ export const StyledTable = styled(Table)`
     .MuiTableCell-head {
       color: ${(props) => props.theme.colors.primary};
     }
+    .MuiTable-root {
+      border-radius: 8px;
+    }
     .MuiTableCell-body {
       color: white;
-      border-radius: 8px;
     }
   }
 `

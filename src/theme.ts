@@ -22,8 +22,8 @@ export const theme = {
     secondaryLight: '',
     secondaryHover: 'rgb(31 41 55)',
     error: 'red',
-    errorHover: 'rgb(31 41 55)',
-    errorTooltip: '',
+    errorHover: 'black',
+    errorTooltip: 'red',
     text: 'white',
     icon: 'gray',
     placeHolder: 'white',
@@ -41,7 +41,7 @@ export const theme = {
     inputDefault: '',
     inputFilled: 'rgb(31 41 55)',
     disabled: {
-      opacity: null,
+      opacity: 0.5,
     },
     overlay: {
       opacity: null,
@@ -55,8 +55,8 @@ export const theme = {
   },
   statusDot: {
     size: {
-      sm: '',
-      md: '',
+      sm: '77px',
+      md: '77px',
     },
   },
   fonts: {
@@ -75,8 +75,7 @@ export const theme = {
   icons: {
     size: {
       sm: '',
-      md: '24px',
-      lg: '50px',
+      md: '77px',
     },
   },
   iconText: {

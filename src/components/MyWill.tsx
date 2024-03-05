@@ -31,10 +31,11 @@ import { Erc721 } from './Erc721'
 import { Erc1155 } from './Erc1155'
 import { Cooldown } from './Cooldown'
 
-function MyWill({ nestIndex, setIsOpen }): React.ReactElement {
+function MyWill({ nestIndex, setIsOpen, setIsReady, hasWill }): React.ReactElement {
   const { sdk } = useSafeAppsSDK()
   const [balances] = useSafeBalances(sdk)
   const [activeStep, setActiveStep] = useState(0)
+
   const {
     control,
     clearErrors,
@@ -79,6 +80,13 @@ function MyWill({ nestIndex, setIsOpen }): React.ReactElement {
     { id: '3', label: 'Add erc1155' },
     { id: '4', label: 'Options' },
   ]
+  useEffect(() => {
+    if (activeStep === 5) {
+      setIsReady(true)
+    } else {
+      setIsReady(false)
+    }
+  })
 
   const getStepContent = (step: number) => {
     switch (step) {
@@ -156,7 +164,6 @@ function MyWill({ nestIndex, setIsOpen }): React.ReactElement {
       case 4:
         if (Object.keys(errors).length === 0) {
           setActiveStep((prevActiveStep) => prevActiveStep + 1)
-          setIsOpen(true)
         }
         break
       default:
@@ -181,16 +188,15 @@ function MyWill({ nestIndex, setIsOpen }): React.ReactElement {
         {steps.map((step, index) => (
           <Step key={step.label}>
             <StepLabel>{step.label}</StepLabel>
-            <StepContent>{getStepContent(activeStep)}</StepContent>
+            <StepContent transitionDuration="auto">{getStepContent(activeStep)}</StepContent>
           </Step>
         ))}
         <div>
           <Row>
-            {activeStep !== 0 && (
-              <Button style={{ marginLeft: '2rem' }} disabled={activeStep === 0} onClick={handleBack} size="md">
-                Back
-              </Button>
-            )}
+            <Button style={{ marginLeft: '2rem' }} disabled={activeStep === 0} onClick={handleBack} size="md">
+              Back
+            </Button>
+
             {activeStep !== steps.length && (
               <Button style={{ marginLeft: '1rem' }} size="md" color="primary" onClick={() => handleNext(activeStep)}>
                 {activeStep === steps.length - 1 ? 'Finish' : 'Next'}

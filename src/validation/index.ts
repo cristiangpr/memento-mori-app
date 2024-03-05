@@ -20,83 +20,27 @@ export const validatePercentages = (
           type: 'manual',
           message: 'Value must be between 1 and 100',
         })
-        return false
+        if (j === data[tokenType][i].beneficiaries.length - 1) {
+          return false
+        }
       }
       sum += Number(data[tokenType][i].beneficiaries[j].percentage)
+      console.log('sum', tokenType, sum)
     }
-    console.log('sum', sum)
+
     if (sum !== 100) {
-      setError(`wills.${willIndex}.${tokenType}.${i}.beneficiaries`, {
-        type: 'manual',
-        message: 'Field values must add up to 100.',
-      })
+      for (let j = 0; j < data[tokenType][i].beneficiaries.length; j += 1) {
+        setError(`wills.${willIndex}.${tokenType}.${i}.beneficiaries.${j}.percentage`, {
+          type: 'manual',
+          message: 'Field values must add up to 100.',
+        })
+      }
       return false
     }
   }
   return true
 }
 
-export const validateTokenSum = async (values: FieldValues, setError: UseFormSetError<Forms>): Promise<boolean> => {
-  const data = values.wills
-  for (let i = 0; i < data.length; i += 1) {
-    for (let j = 0; j < data[i].tokens.length; j += 1) {
-      let tokenSum = 0
-      for (let k = 0; k < data[i].tokens[i].beneficiaries.length; k += 1) {
-        tokenSum += Number(data[i].tokens[j].beneficiaries[k].percentage)
-
-        if (tokenSum !== 100) {
-          setError(`wills.${i}.tokens.${j}.beneficiaries.${k}.percentage`, {
-            type: 'manual',
-            message: 'Field values must add up to 100.',
-          })
-
-          return false
-        }
-      }
-    }
-  }
-  return true
-}
-export const validate1155Sum = async (values: FieldValues, setError: UseFormSetError<Forms>): Promise<boolean> => {
-  const data = values.wills
-  for (let i = 0; i < data.length; i += 1) {
-    for (let j = 0; j < data[i].erc1155s.length; j += 1) {
-      let erc1155Sum = 0
-      for (let k = 0; k < data[i].erc1155s[j].beneficiaries.length; k += 1) {
-        erc1155Sum += Number(data[i].erc1155s[j].beneficiaries[k].percentage)
-      }
-      if (erc1155Sum !== 100) {
-        setError(`wills.${i}.erc1155s.${j}.beneficiaries`, {
-          type: 'manual',
-          message: 'Field values must add up to 100.',
-        })
-        return false
-      }
-    }
-  }
-  return true
-}
-
-export const validateNativeDuplicates = async (
-  values: FieldValues,
-  setError: UseFormSetError<Forms>,
-): Promise<boolean> => {
-  const data = values.wills
-  for (let i = 0; i < data.length; i += 1) {
-    for (let j = 0; j < data[i].native[0].beneficiaries.length; j += 1) {
-      for (let k = j + 1; k < data[i].native[0].beneficiaries.length; k += 1) {
-        if (data[i].native[0].beneficiaries[j].address === data[i].native[0].beneficiaries[k].address) {
-          setError(`wills.${i}.native.${j}`, {
-            type: 'manual',
-            message: 'Beneficiary addresses must be unique.',
-          })
-          return false
-        }
-      }
-    }
-  }
-  return true
-}
 export const validateDuplicates = async (
   data: FieldValues,
   setError: UseFormSetError<Forms>,
@@ -115,22 +59,22 @@ export const validateDuplicates = async (
           }
         }
       }
-
-      for (let i = 0; i < data[tokenType].length; i += 1) {
-        for (let j = 0; j < data[tokenType][i].beneficiaries.length; j += 1) {
-          for (let k = j + 1; k < data[tokenType][i].beneficiaries[j].length; k += 1) {
-            if (data[tokenType][i].beneficiaries[j].address === data[tokenType][i].beneficiaries[k].address) {
-              setError(`wills.${willIndex}.${tokenType}.${i}.beneficiaries`, {
+    }
+    for (let i = 0; i < data[tokenType].length; i += 1) {
+      for (let j = 0; j < data[tokenType][i].beneficiaries.length; j += 1) {
+        for (let k = j + 1; k < data[tokenType][i].beneficiaries.length; k += 1) {
+          if (data[tokenType][i].beneficiaries[j].address === data[tokenType][i].beneficiaries[k].address) {
+            for (let l = 0; l < data[tokenType][i].beneficiaries.length; l += 1) {
+              setError(`wills.${willIndex}.${tokenType}.${i}.beneficiaries.${l}.address`, {
                 type: 'manual',
                 message: 'Beneficiary addresses must be unique.',
               })
-
-              return false
             }
           }
         }
       }
     }
+    return false
   }
   return true
 }
@@ -218,7 +162,9 @@ export const validateContractAddresses = (
         type: 'manual',
         message: 'Please enter a valid address',
       })
-      return false
+      if (i === data[tokenType][i].length - 1) {
+        return false
+      }
     }
   }
 
@@ -240,7 +186,9 @@ export const validateBeneficiaryAddresses = (
           type: 'manual',
           message: 'Please enter a valid address',
         })
-        return false
+        if (j === data[tokenType][i].beneficiaries.length - 1) {
+          return false
+        }
       }
     }
   }

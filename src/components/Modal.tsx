@@ -1,6 +1,6 @@
 /* eslint-disable react/function-component-definition */
 /* eslint-disable no-nested-ternary */
-import { Button, Dot, GenericModal, Icon, Loader } from '@gnosis.pm/safe-react-components'
+import { Button, Dot, GenericModal, Icon, Loader, Text } from '@gnosis.pm/safe-react-components'
 import React from 'react'
 import { StylesProvider, createStyles, makeStyles } from '@material-ui/core/styles'
 import { DialogTitle, List } from '@material-ui/core'
@@ -23,6 +23,13 @@ const useStyles = makeStyles((theme) =>
       textAlign: 'center',
       margin: 10,
     },
+    dot: {
+      height: 77,
+      width: 77,
+    },
+    icon: {
+      transform: 'scale(2)',
+    },
   }),
 )
 
@@ -31,10 +38,10 @@ export const Modal: React.FC<{
   transactionStatus: TransactionStatus
   isOpen: boolean
   handleClose: () => void
-  handleCreate?: any
+  handleSave?: () => void
   hasWill?: boolean
   execTime?: number
-}> = ({ transactionType, transactionStatus, hasWill, execTime, handleClose, isOpen, handleCreate }) => {
+}> = ({ transactionType, transactionStatus, hasWill, execTime, handleClose, isOpen, handleSave }) => {
   const classes = useStyles()
   const { getValues } = useFormContext()
   const values = getValues()
@@ -189,27 +196,27 @@ export const Modal: React.FC<{
                       <StyledTitle size="xs">Cooldown Period</StyledTitle>
                       <div>{will.cooldown?.toString()}</div>
                       <div className={classes.button}>
-                        <Button size="md" type="submit" onSubmit={handleCreate}>
-                          Create
+                        <Button size="md" onClick={handleSave}>
+                          {hasWill ? 'Update Will' : 'Create Will'}
                         </Button>
                       </div>
                     </List>
                   )
                 })
               ) : transactionStatus === TransactionStatus.Executing ? (
-                <div style={{ paddingLeft: '11.875rem' }}>
+                <div style={{ textAlign: 'center', margin: '10px' }}>
                   <Loader size="lg" />
                 </div>
               ) : transactionStatus === TransactionStatus.Success ? (
-                <div style={{ paddingLeft: '12.875rem' }}>
-                  <Dot color="secondary">
-                    <Icon color="white" type="check" size="sm" />
+                <div style={{ margin: '0 0 10px 261.5px' }}>
+                  <Dot color="secondary" className={classes.dot}>
+                    <Icon color="white" type="check" size="md" className={classes.icon} />
                   </Dot>
                 </div>
               ) : transactionStatus === TransactionStatus.Failure ? (
-                <div style={{ paddingLeft: '12.875rem' }}>
-                  <Dot color="error">
-                    <Icon color="white" type="check" size="md" />
+                <div style={{ margin: '0 0 10px 261.5px' }}>
+                  <Dot color="error" className={classes.dot}>
+                    <Icon color="white" type="error" size="md" className={classes.icon} />
                   </Dot>
                 </div>
               ) : null}
@@ -219,134 +226,143 @@ export const Modal: React.FC<{
       )}
       {transactionType === TransactionType.Execute && (
         <StyledModal open={isOpen} onClose={handleClose}>
-          <DialogTitle>
-            <StyledTitle size="lg">
-              {transactionStatus === TransactionStatus.Success
-                ? 'Will Executed'
-                : transactionStatus === TransactionStatus.Executing
-                ? 'Executing Will'
-                : transactionStatus === TransactionStatus.Failure
-                ? 'Transaction Failed'
-                : null}
-            </StyledTitle>
-          </DialogTitle>
-          {transactionStatus === TransactionStatus.Executing ? (
-            <div style={{ paddingLeft: '11.875rem' }}>
-              <Loader size="lg" />
-            </div>
-          ) : transactionStatus === TransactionStatus.Success ? (
-            <div style={{ paddingLeft: '12.875rem' }}>
-              <Dot color="secondary">
-                <Icon color="white" type="check" size="md" />
-              </Dot>
-            </div>
-          ) : transactionStatus === TransactionStatus.Failure ? (
-            <div style={{ paddingLeft: '12.875rem' }}>
-              <Dot color="error">
-                <Icon color="white" type="check" size="md" />
-              </Dot>
-            </div>
-          ) : null}
+          <div className={classes.paper}>
+            <DialogTitle>
+              <StyledTitle size="lg">
+                {transactionStatus === TransactionStatus.Success
+                  ? 'Will Executed'
+                  : transactionStatus === TransactionStatus.Executing
+                  ? 'Executing Will'
+                  : transactionStatus === TransactionStatus.Failure
+                  ? 'Transaction Failed'
+                  : null}
+              </StyledTitle>
+            </DialogTitle>
+            {transactionStatus === TransactionStatus.Executing ? (
+              <div style={{ textAlign: 'center', margin: '10px' }}>
+                <Loader size="lg" />
+              </div>
+            ) : transactionStatus === TransactionStatus.Success ? (
+              <div style={{ margin: '0 0 10px 261.5px' }}>
+                <Dot color="secondary" className={classes.dot}>
+                  <Icon color="white" type="check" size="md" className={classes.icon} />
+                </Dot>
+              </div>
+            ) : transactionStatus === TransactionStatus.Failure ? (
+              <div style={{ margin: '0 0 10px 261.5px' }}>
+                <Dot color="error" className={classes.dot}>
+                  <Icon color="white" type="error" size="md" className={classes.icon} />
+                </Dot>
+              </div>
+            ) : null}
+          </div>
         </StyledModal>
       )}
       {transactionType === TransactionType.Request && (
         <StyledModal open={isOpen} onClose={handleClose}>
-          <DialogTitle>
-            <StyledTitle size="lg">
-              {transactionStatus === TransactionStatus.Success
-                ? 'Execution Requested'
-                : transactionStatus === TransactionStatus.Executing
-                ? 'Requesting Execution'
-                : transactionStatus === TransactionStatus.Failure
-                ? 'Transaction Failed'
-                : null}
-            </StyledTitle>
-          </DialogTitle>
-          {transactionStatus === TransactionStatus.Executing ? (
-            <div style={{ paddingLeft: '11.875rem' }}>
-              <Loader size="lg" />
-            </div>
-          ) : transactionStatus === TransactionStatus.Success ? (
-            <>
-              <div style={{ paddingLeft: '12.875rem' }}>
-                <Dot color="primary">
-                  <Icon color="white" type="check" size="md" />
+          <div className={classes.paper}>
+            <DialogTitle>
+              <StyledTitle size="lg">
+                {transactionStatus === TransactionStatus.Success
+                  ? 'Execution Requested'
+                  : transactionStatus === TransactionStatus.Executing
+                  ? 'Requesting Execution'
+                  : transactionStatus === TransactionStatus.Failure
+                  ? 'Transaction Failed'
+                  : null}
+              </StyledTitle>
+            </DialogTitle>
+            {transactionStatus === TransactionStatus.Executing ? (
+              <div style={{ textAlign: 'center', margin: '10px' }}>
+                <Loader size="lg" />
+              </div>
+            ) : transactionStatus === TransactionStatus.Success ? (
+              <>
+                <div style={{ margin: '0 0 10px 261.5px' }}>
+                  <Dot color="secondary" className={classes.dot}>
+                    <Icon color="white" type="check" size="md" className={classes.icon} />
+                  </Dot>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  {execTime && `Will executable after ${new Date(execTime * 1000).toLocaleString()}`}
+                </div>
+              </>
+            ) : transactionStatus === TransactionStatus.Failure ? (
+              <div style={{ margin: '0 0 10px 261.5px' }}>
+                <Dot color="error" className={classes.dot}>
+                  <Icon color="error" type="check" size="md" className={classes.icon} />
                 </Dot>
               </div>
-              <div>{execTime && `Will executable after ${new Date(execTime * 1000).toLocaleString()}`}</div>
-            </>
-          ) : transactionStatus === TransactionStatus.Failure ? (
-            <div style={{ paddingLeft: '12.875rem' }}>
-              <Dot color="error">
-                <Icon color="white" type="check" size="md" />
-              </Dot>
-            </div>
-          ) : null}
-          onClose={() => handleClose()}
+            ) : null}
+          </div>
         </StyledModal>
       )}
       {transactionType === TransactionType.Cancel && (
         <StyledModal open={isOpen} onClose={handleClose}>
-          <DialogTitle>
-            <StyledTitle size="lg">
-              {transactionStatus === TransactionStatus.Success
-                ? 'Execution Cancelled'
-                : transactionStatus === TransactionStatus.Executing
-                ? 'Cancelling Execution'
-                : transactionStatus === TransactionStatus.Failure
-                ? 'Transaction Failed'
-                : null}
-            </StyledTitle>
-          </DialogTitle>
-          {transactionStatus === TransactionStatus.Executing ? (
-            <div style={{ paddingLeft: '11.875rem' }}>
-              <Loader size="lg" />
-            </div>
-          ) : transactionStatus === TransactionStatus.Success ? (
-            <div style={{ paddingLeft: '12.875rem' }}>
-              <Dot color="primary">
-                <Icon color="white" type="check" size="md" />
-              </Dot>
-            </div>
-          ) : transactionStatus === TransactionStatus.Failure ? (
-            <div style={{ paddingLeft: '12.875rem' }}>
-              <Dot color="error">
-                <Icon color="white" type="check" size="md" />
-              </Dot>
-            </div>
-          ) : null}
+          <div className={classes.paper}>
+            <DialogTitle>
+              <StyledTitle size="lg">
+                {transactionStatus === TransactionStatus.Success
+                  ? 'Execution Cancelled'
+                  : transactionStatus === TransactionStatus.Executing
+                  ? 'Cancelling Execution'
+                  : transactionStatus === TransactionStatus.Failure
+                  ? 'Transaction Failed'
+                  : null}
+              </StyledTitle>
+            </DialogTitle>
+            {transactionStatus === TransactionStatus.Executing ? (
+              <div style={{ textAlign: 'center', margin: '10px' }}>
+                <Loader size="lg" />
+              </div>
+            ) : transactionStatus === TransactionStatus.Success ? (
+              <div style={{ margin: '0 0 10px 261.5px' }}>
+                <Dot color="secondary" className={classes.dot}>
+                  <Icon color="white" type="check" size="md" className={classes.icon} />
+                </Dot>
+              </div>
+            ) : transactionStatus === TransactionStatus.Failure ? (
+              <div style={{ margin: '0 0 10px 261.5px' }}>
+                <Dot color="error" className={classes.dot}>
+                  <Icon color="white" type="error" className={classes.icon} size="md" />
+                </Dot>
+              </div>
+            ) : null}
+          </div>
         </StyledModal>
       )}
       {transactionType === TransactionType.Delete && (
         <StyledModal open={isOpen} onClose={handleClose}>
-          <DialogTitle>
-            <StyledTitle size="lg">
-              {transactionStatus === TransactionStatus.Success
-                ? 'Will Deleted'
-                : transactionStatus === TransactionStatus.Executing
-                ? 'Deleting Will'
-                : transactionStatus === TransactionStatus.Failure
-                ? 'Transaction Failed'
-                : null}
-            </StyledTitle>
-          </DialogTitle>
-          {transactionStatus === TransactionStatus.Executing ? (
-            <div style={{ paddingLeft: '11.875rem' }}>
-              <Loader size="lg" />
-            </div>
-          ) : transactionStatus === TransactionStatus.Success ? (
-            <div style={{ paddingLeft: '12.875rem' }}>
-              <Dot color="primary">
-                <Icon color="white" type="check" size="md" />
-              </Dot>
-            </div>
-          ) : transactionStatus === TransactionStatus.Failure ? (
-            <div style={{ paddingLeft: '12.875rem' }}>
-              <Dot color="error">
-                <Icon color="white" type="check" size="md" />
-              </Dot>
-            </div>
-          ) : null}
+          <div className={classes.paper}>
+            <DialogTitle>
+              <StyledTitle size="lg">
+                {transactionStatus === TransactionStatus.Success
+                  ? 'Will Deleted'
+                  : transactionStatus === TransactionStatus.Executing
+                  ? 'Deleting Will'
+                  : transactionStatus === TransactionStatus.Failure
+                  ? 'Transaction Failed'
+                  : null}
+              </StyledTitle>
+            </DialogTitle>
+            {transactionStatus === TransactionStatus.Executing ? (
+              <div style={{ textAlign: 'center', margin: '10px' }}>
+                <Loader size="lg" />
+              </div>
+            ) : transactionStatus === TransactionStatus.Success ? (
+              <div style={{ margin: '0 0 10px 261.5px' }}>
+                <Dot color="secondary" className={classes.dot}>
+                  <Icon color="white" type="check" size="md" className={classes.icon} />
+                </Dot>
+              </div>
+            ) : transactionStatus === TransactionStatus.Failure ? (
+              <div style={{ margin: '0 0 10px 261.5px' }}>
+                <Dot color="error" className={classes.dot}>
+                  <Icon color="white" type="error" className={classes.icon} size="md" />
+                </Dot>
+              </div>
+            ) : null}
+          </div>
         </StyledModal>
       )}
     </>
