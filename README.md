@@ -11,7 +11,7 @@ Memento Mori is a dapp that lets you create a will for your Safe wallet. You may
 To try out a demo of the dapp follow these instructions.
 1. Make sure your wallet is connected to the Sepolia network.
 2. Go to <https://app.safe.global/>.
-3. If you don't already have one create a Safe on Sepolia and Base Goerli.
+3. If you don't already have them create Safes on Sepolia and Base Sepolia.
 4. Transfer assets to your Safe.
 5. In the Safe UI go to Apps and select My custom apps.
 6. Click Add custom Safe App, paste this url https://memento-mori-app-ac0b3286114c.herokuapp.com/ in the Safe App URL field and click Add.
