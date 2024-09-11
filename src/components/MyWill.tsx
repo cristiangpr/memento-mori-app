@@ -121,7 +121,6 @@ function MyWill({ nestIndex, setIsOpen, setIsReady, hasWill }): React.ReactEleme
   }
   const handleNext = async (step: number): Promise<void> => {
     const data = getValues()
-    console.log('willdata', data)
 
     switch (step) {
       case 0:
@@ -129,7 +128,6 @@ function MyWill({ nestIndex, setIsOpen, setIsReady, hasWill }): React.ReactEleme
         validateDuplicates(data.wills[nestIndex], setError, nestIndex, 'native')
         validatePercentages(data.wills[nestIndex], setError, nestIndex, 'native')
 
-        console.log('errors', errors)
         if (Object.keys(errors).length === 0) setActiveStep((prevActiveStep) => prevActiveStep + 1)
 
         break
@@ -140,7 +138,6 @@ function MyWill({ nestIndex, setIsOpen, setIsReady, hasWill }): React.ReactEleme
         validateDuplicates(data.wills[nestIndex], setError, nestIndex, 'tokens')
         validatePercentages(data.wills[nestIndex], setError, nestIndex, 'tokens')
 
-        console.log('errors', errors)
         if (Object.keys(errors).length === 0) setActiveStep((prevActiveStep) => prevActiveStep + 1)
         break
 
@@ -149,7 +146,6 @@ function MyWill({ nestIndex, setIsOpen, setIsReady, hasWill }): React.ReactEleme
         validateBeneficiaryAddresses(data.wills[nestIndex], setError, nestIndex, 'nfts')
         validateDuplicates(data.wills[nestIndex], setError, nestIndex, 'nfts')
 
-        console.log('errors', errors)
         if (Object.keys(errors).length === 0) setActiveStep((prevActiveStep) => prevActiveStep + 1)
         break
       case 3:
@@ -182,7 +178,6 @@ function MyWill({ nestIndex, setIsOpen, setIsReady, hasWill }): React.ReactEleme
   return (
     <div>
       {nestIndex > 0 && <StyledTitle size="md">{`My Cross Chain Will ${nestIndex}`}</StyledTitle>}
-      {console.log(nestIndex)}
 
       <StyledStepper orientation="vertical" activeStep={activeStep}>
         {steps.map((step, index) => (

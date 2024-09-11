@@ -7,7 +7,7 @@ import { Controller, useFieldArray, useForm, useFormContext } from 'react-hook-f
 import { BaseContract, Contract, ethers, getAddress, getDefaultProvider, JsonRpcProvider } from 'ethers'
 import { useSafeBalances } from '../hooks/useSafeBalances'
 import BalancesTable from './BalancesTable'
-import { ContractWill, Form, FormTypes, Forms, TransactionType, TransactionStatus } from '../types'
+import { Form, FormTypes, Forms, TransactionType, TransactionStatus } from '../types'
 import {
   cancelExecution,
   deleteWill,
@@ -30,6 +30,7 @@ import ABI from '../abis/mementoMori.json'
 
 import MyWill from './MyWill'
 import { Modal } from './Modal'
+import { useApiGet, useApiSend } from '../api'
 
 function MyWills(): React.ReactElement {
   const { sdk, safe } = useSafeAppsSDK()
@@ -64,29 +65,20 @@ function MyWills(): React.ReactElement {
     name: 'wills',
   })
 
+  const { data } = useApiGet(['wills'], getWills, {
+    enabled: true,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  })
+  const { mutate } = useApiSend(saveWill, null, () => setTransactionStatus(TransactionStatus.Failure))
   useEffect(() => {
-    const loadData = async () => {
-      const data = await getWills(safe.safeAddress)
-      console.log('data', data)
-      if (data && Object.keys(data).length > 0) {
-        const display = getDisplayData(data)
-        setDisplayData(display)
-        setHasWill(true)
-        if (displayData && displayData[0].isActive) {
-          setExecTime(getExecTime(displayData[0]))
-
-          if (getExecTime(displayData[0]) <= Date.now()) {
-            setIsExecutable(true)
-          }
-        }
-      }
+    if (data) {
+      setDisplayData(data as FormTypes[])
+      setHasWill(true)
     }
-    loadData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [data])
   useEffect(() => {
     if (hasWill && displayData) {
-      console.log('display', displayData)
       reset({
         wills: [
           {
@@ -110,9 +102,7 @@ function MyWills(): React.ReactElement {
       })
 
       if (displayData && displayData.length > 1) {
-        console.log('length', displayData.length)
         for (let i = 1; i < displayData.length; i += 1) {
-          console.log('i', displayData[i])
           appendWill({
             [Form.Cooldown]: displayData[i].cooldown,
             [Form.IsActive]: displayData[i].isActive,
@@ -140,8 +130,7 @@ function MyWills(): React.ReactElement {
     setTransactionStatus(TransactionStatus.Confirm)
   }
 
-  const handleSave = async (data: Forms): Promise<void> => {
-    console.log('save')
+  const handleSave = async (formData: Forms): Promise<void> => {
     if (hasWill) {
       setTransactionType(TransactionType.Update)
     } else {
@@ -149,7 +138,7 @@ function MyWills(): React.ReactElement {
     }
     setTransactionStatus(TransactionStatus.Executing)
     setIsOpen(true)
-    console.log('url', process.env.REACT_APP_RPC_URL)
+
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
 
@@ -158,10 +147,10 @@ function MyWills(): React.ReactElement {
     if (validated) {
       const apiData = []
       const contractData = []
-      for (let i = 0; i < data.wills.length; i += 1) {
-        const apiWill = formatDataForApi(data.wills[i], safe.safeAddress)
+      for (let i = 0; i < formData.wills.length; i += 1) {
+        const apiWill = formatDataForApi(formData.wills[i], safe.safeAddress)
         apiData.push(apiWill)
-        const contractWill = formatDataForContract(data.wills[i], safe.safeAddress)
+        const contractWill = formatDataForContract(formData.wills[i], safe.safeAddress)
         contractData.push(contractWill)
       }
 
@@ -169,14 +158,15 @@ function MyWills(): React.ReactElement {
       if (transactionType === TransactionType.Create) {
         contract.on('WillCreated', async (ownerAddress) => {
           if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
-            await saveWill(apiData)
+            mutate({
+              content: apiData,
+            })
             setTransactionStatus(TransactionStatus.Success)
             setIsOpen(true)
           }
         })
       } else {
         contract.on('WillUpdated', async (ownerAddress) => {
-          console.log('event')
           if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
             await saveWill(apiData)
             setTransactionStatus(TransactionStatus.Success)
@@ -196,7 +186,7 @@ function MyWills(): React.ReactElement {
 
     contract.on('WillDeleted', async (ownerAddress) => {
       if (ownerAddress === safe.safeAddress) {
-        await deleteWill(displayData, safe)
+        await deleteWill(displayData)
         setTransactionStatus(TransactionStatus.Success)
         setIsOpen(true)
         setHasWill(false)
@@ -243,7 +233,7 @@ function MyWills(): React.ReactElement {
     await saveWillHash(contractData, sdk, safe, transactionType)
     contract.on('ExecutionCancelled', async (ownerAddress) => {
       if (ownerAddress === safe.safeAddress) {
-        await cancelExecution(sdk)
+        await cancelExecution(displayData[0])
         setTransactionStatus(TransactionStatus.Success)
         setIsOpen(true)
         setIsExecutable(false)
@@ -303,8 +293,6 @@ function MyWills(): React.ReactElement {
 
       <WillForm onSubmit={handleSubmit(onSubmit)}>
         {willFields.map((element, index) => {
-          console.log('willfields', willFields)
-
           return (
             <MyWill
               key={element.id}

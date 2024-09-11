@@ -9,29 +9,6 @@ import { theme } from './theme'
 import GlobalStyle from './GlobalStyle'
 import App from './App'
 
-/* const theme = {
-  colors: {
-    primary: 'hotpink',
-  },
-  fonts: {
-    fontFamily: 'DM Sans, sans-serif;',
-  },
-  buttons: {
-    size: {
-      md: {
-        height: '10px',
-        minWidth: '10px',
-        padding: '10px',
-      },
-      lg: {
-        height: '10px',
-        minWidth: '10px',
-        padding: '10px',
-      },
-    },
-  },
-} */
-
 ReactDOM.render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>

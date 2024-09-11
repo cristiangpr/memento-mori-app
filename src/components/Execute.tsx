@@ -36,7 +36,7 @@ function Execute(): React.ReactElement {
 
   const loadData = async (): Promise<void> => {
     const data = await getWills(ownerAddress)
-    console.log('data', data)
+
     if (data && data.length > 0) {
       const display = getDisplayData(data)
       setDisplayData(display)
@@ -60,7 +60,7 @@ function Execute(): React.ReactElement {
     await requestExecution(formattedData, sdk)
     contract.on('ExecutionRequested', async (address) => {
       if (ownerAddress === address) {
-        await setRequestTime(ownerAddress, safe, requestTime)
+        await setRequestTime(requestTime, displayData[0])
         setTransactionStatus(TransactionStatus.Success)
         setIsOpen(true)
       }
@@ -81,7 +81,6 @@ function Execute(): React.ReactElement {
       const formattedWill = formatDataForContract(displayData[i], safe.safeAddress)
       formattedData.push(formattedWill)
     }
-    console.log('exec', formattedData)
 
     await executeWill(sdk, formattedData)
 
@@ -140,8 +139,6 @@ function Execute(): React.ReactElement {
               <>
                 <StyledTitle size="lg">{`Will ${index + 1}`}</StyledTitle>
                 <Will>
-                  {console.log('will', will)}
-                  {console.log('request', displayData)}
                   <StyledTitle size="md">Cooldown Period</StyledTitle>
                   <Text size="sm">{will.cooldown.toString()}</Text>
                   <StyledTitle size="md">Chain Selector</StyledTitle>
@@ -164,10 +161,6 @@ function Execute(): React.ReactElement {
                   {will.tokens.length > 0 ? <StyledTitle size="md">ERC20 Tokens</StyledTitle> : null}
 
                   {will.tokens?.map((token, i) => {
-                    // eslint-disable-next-line no-lone-blocks
-                    {
-                      console.log('displayData', displayData)
-                    }
                     return (
                       <div style={{ width: '100%' }}>
                         <Row>
@@ -265,7 +258,6 @@ function Execute(): React.ReactElement {
           {execTime && (
             <div style={{ padding: '20px' }}>
               <Text size="sm">Will executable after {new Date(execTime * 1000).toLocaleString()}</Text>
-              {console.log('exec', execTime)}
             </div>
           )}
           {isExecutable && (
