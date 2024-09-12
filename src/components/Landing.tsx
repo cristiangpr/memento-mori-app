@@ -1,12 +1,10 @@
-/* eslint-disable react/function-component-definition */
-/* eslint-disable no-nested-ternary */
 import { Title, Icon, Loader, Button, Text } from '@gnosis.pm/safe-react-components'
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { Container, LeftColumn, RightColumn, Row, StyledTitle } from './FormElements'
 import { ReactComponent as Logo } from '../mmlogo.svg'
 
-export const Landing: React.FC = () => {
+export function Landing(): React.ReactElement {
   return (
     <Container>
       <Logo style={{ margin: '10px' }} />

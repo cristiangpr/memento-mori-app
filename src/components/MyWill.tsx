@@ -1,5 +1,3 @@
-/* eslint-disable no-nested-ternary */
-/* eslint-disable no-param-reassign */
 import React, { useEffect, useState } from 'react'
 
 import { Button, TextFieldInput } from '@gnosis.pm/safe-react-components'
@@ -116,7 +114,7 @@ function MyWill({ nestIndex, setIsOpen, setIsReady, hasWill }): React.ReactEleme
 
     switch (step) {
       case 0:
-        validateDuplicates(data.wills[nestIndex], setError, nestIndex, 'native')
+        validateAddresses(data.wills[nestIndex], setError, nestIndex, 'native')
         validatePercentages(data.wills[nestIndex], setError, nestIndex, 'native')
 
         if (Object.keys(errors).length === 0) setActiveStep((prevActiveStep) => prevActiveStep + 1)

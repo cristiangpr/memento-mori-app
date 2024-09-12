@@ -1,5 +1,3 @@
-/* eslint-disable react/function-component-definition */
-/* eslint-disable no-nested-ternary */
 import { Button } from '@gnosis.pm/safe-react-components'
 import React from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
@@ -8,14 +6,7 @@ import { Row, StyledInput, StyledTitle } from './FormElements'
 import BeneficiaryFields from './BeneficiaryFields'
 import BalancesTable from './BalancesTable'
 
-export const Erc20: React.FC<{
-  tokenFields: Record<string, string>[]
-  nestIndex: number
-
-  appendToken
-  removeToken
-  balances
-}> = ({ tokenFields, nestIndex, appendToken, removeToken, balances }) => {
+export function Erc20({ tokenFields, nestIndex, appendToken, removeToken, balances }): React.ReactElement {
   const {
     control,
 

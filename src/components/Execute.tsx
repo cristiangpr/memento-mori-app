@@ -1,5 +1,5 @@
 /* eslint-disable no-nested-ternary */
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
 import { Title, Button, Text } from '@gnosis.pm/safe-react-components'
 import { BaseContract, ethers, JsonRpcProvider } from 'ethers'
@@ -28,13 +28,13 @@ function Execute(): React.ReactElement {
   const [isExecutable, setIsExecutable] = useState<boolean>(false)
   const [hasSearched, setHasSearched] = useState<boolean>(false)
   const [execTime, setExecTime] = useState<number>()
-  const [isOpen, setIsOpen] = useState<boolean>(true)
+  const [isOpen, setIsOpen] = useState<boolean>(false)
   const [transactionType, setTransactionType] = useState<TransactionType>(TransactionType.Request)
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>(TransactionStatus.Success)
 
   const { safe, sdk } = useSafeAppsSDK()
 
-  const loadData = async (): Promise<void> => {
+  const loadData = useCallback(async (): Promise<void> => {
     const data = await getWills(ownerAddress)
 
     if (data && data.length > 0) {
@@ -44,8 +44,8 @@ function Execute(): React.ReactElement {
       setDisplayData(undefined)
     }
     setHasSearched(true)
-  }
-  const handleRequest = async (): Promise<void> => {
+  }, [ownerAddress])
+  const handleRequest = useCallback(async (): Promise<void> => {
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract: BaseContract = new BaseContract(sepoliaMmAddress, ABI, provider)
     setTransactionType(TransactionType.Request)
@@ -69,8 +69,8 @@ function Execute(): React.ReactElement {
     await loadData
     displayData[0].isActive = true
     displayData[0].requestTime = requestTime
-  }
-  const handleExecute = async () => {
+  }, [displayData, loadData, ownerAddress, safe.safeAddress, sdk])
+  const handleExecute = useCallback(async () => {
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     setTransactionType(TransactionType.Execute)
@@ -90,7 +90,7 @@ function Execute(): React.ReactElement {
         setIsOpen(true)
       }
     })
-  }
+  }, [displayData, ownerAddress, safe.safeAddress, sdk])
   const handleClose = (): void => {
     setIsOpen(false)
   }

@@ -1,5 +1,3 @@
-/* eslint-disable react/function-component-definition */
-
 import { Button, Title } from '@gnosis.pm/safe-react-components'
 import React from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
@@ -7,13 +5,7 @@ import { Controller, useFormContext } from 'react-hook-form'
 import { Row, RightColumn, LeftColumn, StyledInput } from './FormElements'
 import BeneficiaryFields from './BeneficiaryFields'
 
-export const Erc1155: React.FC<{
-  erc1155Fields: Record<'id', string>[]
-  nestIndex: number
-
-  appendErc1155
-  removeErc1155
-}> = ({ erc1155Fields, nestIndex, appendErc1155, removeErc1155 }) => {
+export function Erc1155({ erc1155Fields, nestIndex, appendErc1155, removeErc1155 }): React.ReactElement {
   const {
     control,
 

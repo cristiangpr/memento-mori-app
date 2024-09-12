@@ -6,10 +6,7 @@ import { useFormContext } from 'react-hook-form'
 import { Row } from './FormElements'
 import BeneficiaryFields from './BeneficiaryFields'
 
-export const Native: React.FC<{
-  nativeTokenFields: Record<'id', string>[]
-  nestIndex: number
-}> = ({ nativeTokenFields, nestIndex }) => {
+export function Native({ nativeTokenFields, nestIndex }): React.ReactElement {
   return (
     <>
       {' '}

@@ -1,6 +1,6 @@
 /* eslint-disable no-nested-ternary */
 /* eslint-disable no-param-reassign */
-import React, { FormEvent, useEffect, useState } from 'react'
+import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { Title, Button, TextFieldInput, Stepper, Text } from '@gnosis.pm/safe-react-components'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
 import { useFieldArray, useForm, useFormContext } from 'react-hook-form'
@@ -68,12 +68,18 @@ function MyWills(): React.ReactElement {
     retry: 1,
   })
   const { mutate } = useApiSend(saveWill, null, () => setTransactionStatus(TransactionStatus.Failure))
-  useEffect(() => {
+  const memoizedDisplayData = useMemo(() => {
     if (data) {
-      setDisplayData(data as FormTypes[])
+      return data as FormTypes[]
+    }
+    return []
+  }, [data])
+  useEffect(() => {
+    if (memoizedDisplayData) {
+      setDisplayData(memoizedDisplayData)
       setHasWill(true)
     }
-  }, [data])
+  }, [memoizedDisplayData])
   useEffect(() => {
     if (hasWill && displayData) {
       reset({
@@ -127,53 +133,56 @@ function MyWills(): React.ReactElement {
     setTransactionStatus(TransactionStatus.Confirm)
   }
 
-  const handleSave = async (formData: Forms): Promise<void> => {
-    if (hasWill) {
-      setTransactionType(TransactionType.Update)
-    } else {
-      setTransactionType(TransactionType.Create)
-    }
-    setTransactionStatus(TransactionStatus.Executing)
-    setIsOpen(true)
-
-    const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
-    const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
-
-    const validated = Object.keys(errors).length === 0
-
-    if (validated) {
-      const apiData = []
-      const contractData = []
-      for (let i = 0; i < formData.wills.length; i += 1) {
-        const apiWill = formatDataForApi(formData.wills[i], safe.safeAddress)
-        apiData.push(apiWill)
-        const contractWill = formatDataForContract(formData.wills[i], safe.safeAddress)
-        contractData.push(contractWill)
-      }
-
-      await saveWillHash(contractData, sdk, safe, transactionType)
-      if (transactionType === TransactionType.Create) {
-        contract.on('WillCreated', async (ownerAddress) => {
-          if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
-            mutate({
-              content: apiData,
-            })
-            setTransactionStatus(TransactionStatus.Success)
-            setIsOpen(true)
-          }
-        })
+  const handleSave = useCallback(
+    async (formData: Forms): Promise<void> => {
+      if (hasWill) {
+        setTransactionType(TransactionType.Update)
       } else {
-        contract.on('WillUpdated', async (ownerAddress) => {
-          if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
-            await saveWill(apiData)
-            setTransactionStatus(TransactionStatus.Success)
-            setIsOpen(true)
-          }
-        })
+        setTransactionType(TransactionType.Create)
       }
-    }
-  }
-  const handleDelete = async (): Promise<void> => {
+      setTransactionStatus(TransactionStatus.Executing)
+      setIsOpen(true)
+
+      const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
+      const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
+
+      const validated = Object.keys(errors).length === 0
+
+      if (validated) {
+        const apiData = []
+        const contractData = []
+        for (let i = 0; i < formData.wills.length; i += 1) {
+          const apiWill = formatDataForApi(formData.wills[i], safe.safeAddress)
+          apiData.push(apiWill)
+          const contractWill = formatDataForContract(formData.wills[i], safe.safeAddress)
+          contractData.push(contractWill)
+        }
+
+        await saveWillHash(contractData, sdk, safe, transactionType)
+        if (transactionType === TransactionType.Create) {
+          contract.on('WillCreated', async (ownerAddress) => {
+            if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
+              mutate({
+                content: apiData,
+              })
+              setTransactionStatus(TransactionStatus.Success)
+              setIsOpen(true)
+            }
+          })
+        } else {
+          contract.on('WillUpdated', async (ownerAddress) => {
+            if (getAddress(ownerAddress) === getAddress(safe.safeAddress)) {
+              await saveWill(apiData)
+              setTransactionStatus(TransactionStatus.Success)
+              setIsOpen(true)
+            }
+          })
+        }
+      }
+    },
+    [errors, hasWill, mutate, safe, sdk, transactionType],
+  )
+  const handleDelete = useCallback(async (): Promise<void> => {
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     setTransactionType(TransactionType.Delete)
@@ -213,9 +222,9 @@ function MyWills(): React.ReactElement {
         })
       }
     })
-  }
+  }, [displayData, reset, safe.safeAddress, sdk])
 
-  const handleCancel = async (): Promise<void> => {
+  const handleCancel = useCallback(async (): Promise<void> => {
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     setTransactionType(TransactionType.Cancel)
@@ -236,8 +245,8 @@ function MyWills(): React.ReactElement {
         setIsExecutable(false)
       }
     })
-  }
-  const handleExecute = async () => {
+  }, [displayData, safe, sdk, transactionType])
+  const handleExecute = useCallback(async () => {
     const provider = new JsonRpcProvider(process.env.REACT_APP_RPC_URL)
     const contract = new BaseContract(sepoliaMmAddress, ABI, provider)
     setTransactionType(TransactionType.Execute)
@@ -257,7 +266,7 @@ function MyWills(): React.ReactElement {
         setIsOpen(true)
       }
     })
-  }
+  }, [displayData, safe.safeAddress, sdk])
   const handleScroll = (e: FormEvent<HTMLInputElement>) => {
     e.currentTarget.blur()
   }

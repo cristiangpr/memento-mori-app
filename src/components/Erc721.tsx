@@ -1,18 +1,10 @@
-/* eslint-disable react/function-component-definition */
-/* eslint-disable no-nested-ternary */
 import { Button, Title } from '@gnosis.pm/safe-react-components'
 import React from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
 import { Row, StyledInput } from './FormElements'
 import BeneficiaryFields from './BeneficiaryFields'
 
-export const Erc721: React.FC<{
-  nftFields: Record<'id', string>[]
-  nestIndex: number
-
-  appendNft
-  removeNft
-}> = ({ nftFields, nestIndex, appendNft, removeNft }) => {
+export function Erc721({ nftFields, nestIndex, appendNft, removeNft }): React.ReactElement {
   const {
     control,
 

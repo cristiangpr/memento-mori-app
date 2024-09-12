@@ -1,7 +1,5 @@
-/* eslint-disable no-await-in-loop */
-/* eslint-disable prefer-const */
 /* eslint-disable prefer-destructuring */
-/* eslint-disable no-param-reassign */
+
 import { Contract, Interface, ZeroAddress, ethers } from 'ethers'
 
 import { BaseTransaction, SendTransactionsParams, SendTransactionsResponse } from '@safe-global/safe-apps-sdk'
@@ -47,7 +45,6 @@ export const saveWillHash = async (
   safe: { safeAddress: string; chainId?: number; threshold?: number; owners?: string[]; isReadOnly?: boolean },
   transactionType: TransactionType,
 ): Promise<void> => {
-  console.log('hash', wills)
   const IMementoMori = new Interface(ABI)
   const data = IMementoMori.encodeFunctionData('saveWillHash', [wills, transactionType])
   const safeSaveWillHashTransaction: BaseTransaction = {

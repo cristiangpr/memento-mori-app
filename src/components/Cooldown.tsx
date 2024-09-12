@@ -1,17 +1,10 @@
-/* eslint-disable react/function-component-definition */
-/* eslint-disable no-nested-ternary */
 import { Button, Dot, GenericModal, Icon, Loader, Title } from '@gnosis.pm/safe-react-components'
 import React from 'react'
 import { Controller } from 'react-hook-form'
 
 import { Row, RightColumn, LeftColumn, StyledInput } from './FormElements'
 
-export const Cooldown: React.FC<{
-  nestIndex: number
-  control
-  errors
-  clearErrors
-}> = ({ nestIndex, control, errors, clearErrors }) => {
+export function Cooldown({ nestIndex, control, errors, clearErrors }): React.ReactElement {
   return (
     <div>
       {nestIndex === 0 ? (
