@@ -1,5 +1,5 @@
 import React from 'react'
-import { Nav, NavLink, NavMenu, NavBtn, NavBtnLink } from './NavbarElements'
+import { Nav, NavLink, NavMenu } from './NavbarElements'
 import { ReactComponent as Icon } from '../icon.svg'
 
 function Navbar(): React.ReactElement {

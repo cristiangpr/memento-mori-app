@@ -25,7 +25,7 @@ export const request = async (options: AxiosRequestConfig<any>) => {
 }
 export const useApiGet = (
   key: string[],
-  fn: () => Promise<any>,
+  fn: (params: any) => Promise<any>,
   options: { enabled: boolean; refetchOnWindowFocus: boolean; retry: number },
 ) =>
   useQuery({

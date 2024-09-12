@@ -1,6 +1,6 @@
 /* eslint-disable react/function-component-definition */
 /* eslint-disable no-nested-ternary */
-import { Button, Dot, GenericModal, Icon, Loader } from '@gnosis.pm/safe-react-components'
+import { Button } from '@gnosis.pm/safe-react-components'
 import React from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
 import { TransactionStatus, TransactionType } from '../types'
@@ -18,8 +18,7 @@ export const Erc20: React.FC<{
 }> = ({ tokenFields, nestIndex, appendToken, removeToken, balances }) => {
   const {
     control,
-    clearErrors,
-    setError,
+
     formState: { errors },
   } = useFormContext()
   return (

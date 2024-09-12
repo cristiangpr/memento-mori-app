@@ -1,9 +1,9 @@
 /* eslint-disable no-nested-ternary */
 /* eslint-disable no-param-reassign */
-import React, { FormEvent, useEffect, useState } from 'react'
-import styled from 'styled-components'
-import { Title, Button, TextFieldInput } from '@gnosis.pm/safe-react-components'
-import Stepper from '@material-ui/core/Stepper'
+import React, { useEffect, useState } from 'react'
+
+import { Button, TextFieldInput } from '@gnosis.pm/safe-react-components'
+
 import Step from '@material-ui/core/Step'
 import StepLabel from '@material-ui/core/StepLabel'
 import StepContent from '@material-ui/core/StepContent'
@@ -11,14 +11,11 @@ import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
 import { Controller, useFieldArray, useForm, useFormContext } from 'react-hook-form'
 import { BaseContract, Contract, getDefaultProvider } from 'ethers'
 import { useSafeBalances } from '../hooks/useSafeBalances'
-import BalancesTable from './BalancesTable'
+
 import { Form, FormTypes } from '../types'
 
-import { Container, Row, LeftColumn, RightColumn, WillForm, StyledStepper, StyledTitle } from './FormElements'
-// eslint-disable-next-line import/no-cycle
-import BeneficiaryFields from './BeneficiaryFields'
-import { sepoliaMmAddress } from '../constants'
-import ABI from '../abis/mementoMori.json'
+import { Row, StyledStepper, StyledTitle } from './FormElements'
+
 import { validatePercentages, validateDuplicates, validateAddresses } from '../validation'
 import { Native } from './Native'
 import { Erc20 } from './Erc20'

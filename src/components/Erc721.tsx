@@ -1,9 +1,8 @@
 /* eslint-disable react/function-component-definition */
 /* eslint-disable no-nested-ternary */
-import { Button, Dot, GenericModal, Icon, Loader, Title } from '@gnosis.pm/safe-react-components'
+import { Button, Title } from '@gnosis.pm/safe-react-components'
 import React from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
-import { TransactionStatus, TransactionType } from '../types'
 import { Row, StyledInput } from './FormElements'
 import BeneficiaryFields from './BeneficiaryFields'
 
@@ -16,8 +15,7 @@ export const Erc721: React.FC<{
 }> = ({ nftFields, nestIndex, appendNft, removeNft }) => {
   const {
     control,
-    clearErrors,
-    setError,
+
     formState: { errors },
   } = useFormContext()
   return (

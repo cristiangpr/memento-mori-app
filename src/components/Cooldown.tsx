@@ -3,9 +3,8 @@
 import { Button, Dot, GenericModal, Icon, Loader, Title } from '@gnosis.pm/safe-react-components'
 import React from 'react'
 import { Controller } from 'react-hook-form'
-import { TransactionStatus, TransactionType } from '../types'
+
 import { Row, RightColumn, LeftColumn, StyledInput } from './FormElements'
-import BeneficiaryFields from './BeneficiaryFields'
 
 export const Cooldown: React.FC<{
   nestIndex: number

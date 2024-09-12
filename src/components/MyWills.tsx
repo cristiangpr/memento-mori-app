@@ -3,10 +3,9 @@
 import React, { FormEvent, useEffect, useState } from 'react'
 import { Title, Button, TextFieldInput, Stepper, Text } from '@gnosis.pm/safe-react-components'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
-import { Controller, useFieldArray, useForm, useFormContext } from 'react-hook-form'
-import { BaseContract, Contract, ethers, getAddress, getDefaultProvider, JsonRpcProvider } from 'ethers'
+import { useFieldArray, useForm, useFormContext } from 'react-hook-form'
+import { BaseContract, getAddress, getDefaultProvider, JsonRpcProvider } from 'ethers'
 import { useSafeBalances } from '../hooks/useSafeBalances'
-import BalancesTable from './BalancesTable'
 import { Form, FormTypes, Forms, TransactionType, TransactionStatus } from '../types'
 import {
   cancelExecution,
@@ -23,8 +22,6 @@ import {
   saveWillHash,
 } from '../utils'
 import { Container, Row, LeftColumn, RightColumn, WillForm, StyledTitle } from './FormElements'
-// eslint-disable-next-line import/no-cycle
-import BeneficiaryFields from './BeneficiaryFields'
 import { baseSepoliaChainSelector, baseSepoliaMmAddress, sepoliaChainSelector, sepoliaMmAddress } from '../constants'
 import ABI from '../abis/mementoMori.json'
 

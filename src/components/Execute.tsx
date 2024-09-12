@@ -1,7 +1,7 @@
 /* eslint-disable no-nested-ternary */
 import React, { useEffect, useState } from 'react'
 import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk'
-import { Title, Button, TextFieldInput, GenericModal, Loader, Dot, Icon, Text } from '@gnosis.pm/safe-react-components'
+import { Title, Button, Text } from '@gnosis.pm/safe-react-components'
 import { BaseContract, ethers, JsonRpcProvider } from 'ethers'
 import {
   executeWill,
