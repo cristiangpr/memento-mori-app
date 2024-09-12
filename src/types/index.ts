@@ -110,9 +110,5 @@ export type ContractWill = {
   xChainAddress: string
   baseAddress: string
 }
-export enum TokenType {
-  Native = 'native',
-  Token = 'tokens',
-  Nft = 'nfts',
-  Erc1155 = 'erc1155s',
-}
+
+export type TokenType = 'native' | 'tokens' | 'nfts' | 'erc1155s'

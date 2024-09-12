@@ -19,12 +19,7 @@ import { Container, Row, LeftColumn, RightColumn, WillForm, StyledStepper, Style
 import BeneficiaryFields from './BeneficiaryFields'
 import { sepoliaMmAddress } from '../constants'
 import ABI from '../abis/mementoMori.json'
-import {
-  validatePercentages,
-  validateDuplicates,
-  validateContractAddresses,
-  validateBeneficiaryAddresses,
-} from '../validation'
+import { validatePercentages, validateDuplicates, validateAddresses } from '../validation'
 import { Native } from './Native'
 import { Erc20 } from './Erc20'
 import { Erc721 } from './Erc721'
@@ -124,7 +119,6 @@ function MyWill({ nestIndex, setIsOpen, setIsReady, hasWill }): React.ReactEleme
 
     switch (step) {
       case 0:
-        validateBeneficiaryAddresses(data.wills[nestIndex], setError, nestIndex, 'native')
         validateDuplicates(data.wills[nestIndex], setError, nestIndex, 'native')
         validatePercentages(data.wills[nestIndex], setError, nestIndex, 'native')
 
@@ -133,8 +127,8 @@ function MyWill({ nestIndex, setIsOpen, setIsReady, hasWill }): React.ReactEleme
         break
 
       case 1:
-        validateBeneficiaryAddresses(data.wills[nestIndex], setError, nestIndex, 'tokens')
-        validateContractAddresses(data.wills[nestIndex], setError, nestIndex, 'tokens')
+        validateAddresses(data.wills[nestIndex], setError, nestIndex, 'tokens')
+
         validateDuplicates(data.wills[nestIndex], setError, nestIndex, 'tokens')
         validatePercentages(data.wills[nestIndex], setError, nestIndex, 'tokens')
 
@@ -142,15 +136,14 @@ function MyWill({ nestIndex, setIsOpen, setIsReady, hasWill }): React.ReactEleme
         break
 
       case 2:
-        validateContractAddresses(data.wills[nestIndex], setError, nestIndex, 'nfts')
-        validateBeneficiaryAddresses(data.wills[nestIndex], setError, nestIndex, 'nfts')
+        validateAddresses(data.wills[nestIndex], setError, nestIndex, 'nfts')
+
         validateDuplicates(data.wills[nestIndex], setError, nestIndex, 'nfts')
 
         if (Object.keys(errors).length === 0) setActiveStep((prevActiveStep) => prevActiveStep + 1)
         break
       case 3:
-        validateBeneficiaryAddresses(data.wills[nestIndex], setError, nestIndex, 'erc1155s')
-        validateContractAddresses(data.wills[nestIndex], setError, nestIndex, 'erc1155s')
+        validateAddresses(data.wills[nestIndex], setError, nestIndex, 'erc1155s')
         validateDuplicates(data.wills[nestIndex], setError, nestIndex, 'erc1155s')
         validatePercentages(data.wills[nestIndex], setError, nestIndex, 'erc1155s')
 

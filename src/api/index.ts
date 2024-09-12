@@ -1,12 +1,12 @@
-import axios from 'axios'
-import { devUrl, prodUrl } from '../constants'
+import axios, { AxiosRequestConfig } from 'axios'
 import { useMutation, UseMutationOptions, useQuery, useQueryClient } from 'react-query'
+import { devUrl, prodUrl } from '../constants'
 
 const client = axios.create({
   baseURL: devUrl,
 })
 
-export const request = async (options) => {
+export const request = async (options: AxiosRequestConfig<any>) => {
   const token = process.env.REACT_APP_DEV_TOKEN
 
   if (token) {
@@ -23,7 +23,11 @@ export const request = async (options) => {
 
   return client(options).then(onSuccess).catch(onError)
 }
-export const useApiGet = (key, fn, options) =>
+export const useApiGet = (
+  key: string[],
+  fn: () => Promise<any>,
+  options: { enabled: boolean; refetchOnWindowFocus: boolean; retry: number },
+) =>
   useQuery({
     queryKey: key,
     queryFn: fn,
