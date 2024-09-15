@@ -16,7 +16,19 @@ import {
   setRequestTime,
 } from '../utils'
 import { FormTypes, Forms, TransactionStatus, TransactionType } from '../types'
-import { Container, LeftColumn, RightColumn, Row, Will, WillForm, StyledInput, StyledTitle } from './FormElements'
+import {
+  Container,
+  LeftColumn,
+  RightColumn,
+  Row,
+  Will,
+  WillForm,
+  StyledInput,
+  StyledTitle,
+  InputRow,
+  WidthWrapper,
+  ButtonWrapper,
+} from './FormElements'
 import { sepoliaMmAddress } from '../constants'
 import ABI from '../abis/mementoMori.json'
 import { Modal } from './Modal'
@@ -35,7 +47,7 @@ function Execute(): React.ReactElement {
   const { safe, sdk } = useSafeAppsSDK()
 
   const loadData = useCallback(async (): Promise<void> => {
-    const data = await getWills(ownerAddress)
+    const data = await getWills({ address: ownerAddress })
 
     if (data && data.length > 0) {
       const display = getDisplayData(data)
@@ -119,14 +131,14 @@ function Execute(): React.ReactElement {
 
       <StyledTitle size="lg">Execute</StyledTitle>
       <StyledTitle size="sm">Enter owner address to find will and request execution</StyledTitle>
-      <Row style={{ width: '50%', padding: '1rem' }}>
+      <InputRow>
         <StyledInput
           value={ownerAddress}
           onChange={(e) => setOwnerAddress(e.target.value)}
           name="ownerAddress"
           label="owner address"
         />
-      </Row>
+      </InputRow>
       <div>
         <Button size="md" onClick={() => loadData()}>
           Find Will
@@ -189,7 +201,7 @@ function Execute(): React.ReactElement {
                   {will.nfts.length > 0 ? <StyledTitle size="md">ERC721 NFTs</StyledTitle> : null}
                   {will.nfts?.map((nft, i) => {
                     return (
-                      <div style={{ width: '100%' }}>
+                      <WidthWrapper>
                         <Row>
                           <StyledTitle size="sm">TokenAddress </StyledTitle>
                         </Row>
@@ -210,13 +222,13 @@ function Execute(): React.ReactElement {
                             </Row>
                           )
                         })}
-                      </div>
+                      </WidthWrapper>
                     )
                   })}
                   {will.erc1155s.length > 0 ? <StyledTitle size="md">ERC1155 Tokens</StyledTitle> : null}
                   {will.erc1155s?.map((erc1155, i) => {
                     return (
-                      <div style={{ width: '100%' }}>
+                      <WidthWrapper>
                         <Row>
                           <LeftColumn>
                             <StyledTitle size="sm">Token Address</StyledTitle>
@@ -240,7 +252,7 @@ function Execute(): React.ReactElement {
                             </Row>
                           )
                         })}
-                      </div>
+                      </WidthWrapper>
                     )
                   })}
                 </Will>
@@ -249,23 +261,23 @@ function Execute(): React.ReactElement {
           })}
 
           {isExecutor && !isExecutable && (
-            <div style={{ padding: '20px' }}>
+            <ButtonWrapper>
               <Button size="md" color="primary" onClick={() => handleRequest()}>
                 Request Execution
               </Button>
-            </div>
+            </ButtonWrapper>
           )}
           {execTime && (
-            <div style={{ padding: '20px' }}>
+            <ButtonWrapper>
               <Text size="sm">Will executable after {new Date(execTime * 1000).toLocaleString()}</Text>
-            </div>
+            </ButtonWrapper>
           )}
           {isExecutable && (
-            <div style={{ padding: '20px' }}>
+            <ButtonWrapper>
               <Button size="md" color="primary" onClick={() => handleExecute()}>
                 Execute Will
               </Button>
-            </div>
+            </ButtonWrapper>
           )}
         </>
       ) : hasSearched ? (

@@ -1,14 +1,15 @@
 import { NavLink as Link } from 'react-router-dom'
 import styled from 'styled-components'
+import { FaBars } from 'react-icons/fa'
 
 export const Nav = styled.nav`
   background: rgb(31 41 55);
   height: 85px;
   display: flex;
-  justify-content: flex-start;
-
-  /* Third Nav */
-  /* justify-content: flex-start; */
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem calc((100vw - 1000px) / 2);
+  z-index: 10;
 `
 
 export const NavLink = styled(Link)`
@@ -19,71 +20,58 @@ export const NavLink = styled(Link)`
   padding: 0 1rem;
   height: 100%;
   font-size: 20px;
-  font-family: Averta, Roboto, "Helvetica Neue", Arial, "Segoe UI", Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", -apple-system, BlinkMacSystemFont, sans-serif
+  font-family: Averta, Roboto, 'Helvetica Neue', Arial, 'Segoe UI', Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans',
+    -apple-system, BlinkMacSystemFont, sans-serif;
   cursor: pointer;
   &.active {
-     color:  ${(props) => props.theme.colors.primary};
+    color: ${(props) => props.theme.colors.primary};
   }
-  &.hover {
-    color: rgb(81, 218, 207)
+  &:hover {
+    color: rgb(81, 218, 207);
   }
 `
 
-/* export const Bars = styled(FaBars)`
+export const Bars = styled(FaBars)`
   display: none;
-  color: #808080;
+  color: #fff;
+  font-size: 1.8rem;
+  cursor: pointer;
+
   @media screen and (max-width: 768px) {
     display: block;
-    position: absolute;
-    top: 0;
-    right: 0;
-    transform: translate(-100%, 75%);
-    font-size: 1.8rem;
-    cursor: pointer;
   }
 `
-*/
+
 export const NavMenu = styled.div`
   display: flex;
   align-items: center;
-  margin-right: -24px;
-  /* Second Nav */
-  /* margin-right: 24px; */
-  /* Third Nav */
-  /* width: 100vw;
-white-space: nowrap; */
+
   @media screen and (max-width: 768px) {
     display: none;
   }
 `
 
-export const NavBtn = styled.nav`
-  display: flex;
-  align-items: center;
-  margin-right: 24px;
-  /* Third Nav */
-  /* justify-content: flex-end;
-width: 100vw; */
+interface MobileNavProps {
+  isOpen: boolean
+}
+
+export const MobileNav = styled.div<MobileNavProps>`
+  display: none;
+
   @media screen and (max-width: 768px) {
-    display: none;
+    display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
+    flex-direction: column;
+    background: rgb(31 41 55);
+    position: absolute;
+    top: 85px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   }
 `
 
-export const NavBtnLink = styled(Link)`
-  border-radius: 4px;
-  background: #808080;
-  padding: 10px 22px;
-  color: #000000;
-  outline: none;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  text-decoration: none;
-  /* Second Nav */
-  margin-left: 24px;
-  &:hover {
-    transition: all 0.2s ease-in-out;
-    background: #fff;
-    color: #808080;
-  }
+export const MobileNavLink = styled(NavLink)`
+  padding: 15px 0;
 `

@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 /* eslint-disable prefer-destructuring */
 
 import { Contract, Interface, ZeroAddress, ethers } from 'ethers'
@@ -21,19 +22,20 @@ import {
 import { devUrl, prodUrl, sepoliaMmAddress } from '../constants'
 import { request } from '../api'
 
-export const saveWill = async (data: FormTypes[]): Promise<void> => {
+export const saveWills = async (data: FormTypes[]): Promise<void> => {
   for (let i = 0; i < data.length; i += 1) {
-    if (hasWill(data[i].baseAddress, data[i].chainSelector)) {
-      request({
+    if (data[i].id) {
+      console.log('update', data)
+      await request({
         url: `/wills/${data[i].id}`,
         method: 'PUT',
-        data: data[i],
+        data: { data: data[i] },
       })
     } else {
-      request({
+      await request({
         url: `/wills`,
         method: 'POST',
-        data: data[i],
+        data: { data: data[i] },
       })
     }
   }
@@ -85,13 +87,14 @@ export const saveWillHash = async (
   }
 }
 
-export const getWills = async (address: string): Promise<any[]> => {
+export const getWills = async (params: { address: string }): Promise<any[]> => {
   const res = await request({
-    url: `/wills?filters[baseAddress][$eq]=${address}&sort=id`,
+    url: `/wills?filters[baseAddress][$eq]=${params.address}&sort=id`,
     method: 'GET',
   })
   return res
 }
+
 export const hasWill = async (baseAddress: string, chainSelector: string): Promise<boolean> => {
   const req = await request({
     url: `/wills?filters[baseAddress][$eq]=${baseAddress}&filters[chainSelector][$eq]=${chainSelector}`,
@@ -114,7 +117,7 @@ const formatAssetData = (assets: NativeToken[] | Token[] | NFT[] | Erc1155[], is
   })
 }
 export const formatDataForApi = (data: FormTypes, ownerAddress: string): FormTypes => {
-  const newData = structuredClone(data) // Modern deep clone method
+  const newData = structuredClone(data)
 
   const allBeneficiaries = [
     ...newData.native[0].beneficiaries,

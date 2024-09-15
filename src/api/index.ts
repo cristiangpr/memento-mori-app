@@ -14,6 +14,7 @@ export const request = async (options: AxiosRequestConfig<any>) => {
   }
 
   const onSuccess = (response) => {
+    console.log('suc', response)
     return response?.data?.data
   }
 
@@ -23,17 +24,17 @@ export const request = async (options: AxiosRequestConfig<any>) => {
 
   return client(options).then(onSuccess).catch(onError)
 }
-export const useApiGet = (
+export const useApiGet = <TData, TParams>(
   key: string[],
-  fn: (params: any) => Promise<any>,
+  fn: (params: TParams) => Promise<TData>,
+  params: TParams,
   options: { enabled: boolean; refetchOnWindowFocus: boolean; retry: number },
 ) =>
   useQuery({
-    queryKey: key,
-    queryFn: fn,
+    queryKey: [...key, params],
+    queryFn: () => fn(params),
     ...options,
   })
-
 export const useApiSend = (
   fn: (variables: any) => Promise<any>,
   success?: (data: any) => void,
