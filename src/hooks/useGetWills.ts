@@ -1,5 +1,4 @@
-import { useApiGet } from '../api'
-import { getWills } from '../utils'
+import { useApiGet, getWills } from '../api'
 
 function useGetWills(address: string) {
   return useApiGet(

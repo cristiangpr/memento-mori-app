@@ -1,5 +1,4 @@
-import { useApiSend } from '../api'
-import { saveWills } from '../utils'
+import { useApiSend, saveWills } from '../api'
 
 function useSaveWills() {
   return useApiSend(

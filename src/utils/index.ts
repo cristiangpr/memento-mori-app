@@ -87,24 +87,6 @@ export const saveWillHash = async (
   }
 }
 
-export const getWills = async (params: { address: string }): Promise<any[]> => {
-  const res = await request({
-    url: `/wills?filters[baseAddress][$eq]=${params.address}&sort=id`,
-    method: 'GET',
-  })
-  return res
-}
-
-export const hasWill = async (baseAddress: string, chainSelector: string): Promise<boolean> => {
-  const req = await request({
-    url: `/wills?filters[baseAddress][$eq]=${baseAddress}&filters[chainSelector][$eq]=${chainSelector}`,
-    method: 'GET',
-  })
-  if (req.data.length === 0) {
-    return false
-  }
-  return true
-}
 const formatAssetData = (assets: NativeToken[] | Token[] | NFT[] | Erc1155[], isNFT = false) => {
   return assets.map((asset) => {
     const beneficiaries = asset.beneficiaries.map((b) => b.address)
@@ -235,14 +217,6 @@ export const executeWill = async (sdk: SafeAppsSDK, wills: FormTypes[]): Promise
   return hash
 }
 
-export const deleteWill = async (data: FormTypes[]): Promise<void> => {
-  for (let i = 0; i < data.length; i += 1) {
-    request({
-      url: `/wills/${data[i].id}`,
-      method: 'DELETE',
-    })
-  }
-}
 export const deleteWillHash = async (sdk: SafeAppsSDK): Promise<void> => {
   const mmInterface = new Interface(ABI)
   const deleteData = mmInterface.encodeFunctionData('deleteWill')
@@ -257,14 +231,6 @@ export const deleteWillHash = async (sdk: SafeAppsSDK): Promise<void> => {
   })
 }
 
-export const setRequestTime = async (requestTime: string, data: FormTypes): Promise<void> => {
-  request({
-    url: `/wills/${data.id}`,
-    method: 'PUT',
-    data: { data: { isActive: true, requestTime } },
-  })
-}
-
 export const requestExecution = async (wills: ContractWill[], sdk: SafeAppsSDK): Promise<void> => {
   const mmInterface = new Interface(ABI)
   const requestData = mmInterface.encodeFunctionData('requestExecution', [wills])
@@ -276,14 +242,6 @@ export const requestExecution = async (wills: ContractWill[], sdk: SafeAppsSDK):
   const params = { safeTxGas: 500000000 }
   await sdk.txs.send({
     txs: [requestTransaction],
-  })
-}
-
-export const cancelExecution = async (data: FormTypes): Promise<void> => {
-  request({
-    url: `/wills/${data.id}`,
-    method: 'PUT',
-    data: { data: { isActive: false, requestTime: '0' } },
   })
 }
 

@@ -1,6 +1,8 @@
+/* eslint-disable no-await-in-loop */
 import axios, { AxiosRequestConfig } from 'axios'
 import { useMutation, UseMutationOptions, useQuery, useQueryClient } from 'react-query'
 import { devUrl, prodUrl } from '../constants'
+import { FormTypes } from '../types'
 
 const client = axios.create({
   baseURL: devUrl,
@@ -60,4 +62,63 @@ export const useApiSend = (
     retry: 2,
     ...options,
   })
+}
+export const setRequestTime = async (requestTime: string, data: FormTypes): Promise<void> => {
+  request({
+    url: `/wills/${data.id}`,
+    method: 'PUT',
+    data: { data: { isActive: true, requestTime } },
+  })
+}
+export const cancelExecution = async (data: FormTypes): Promise<void> => {
+  request({
+    url: `/wills/${data.id}`,
+    method: 'PUT',
+    data: { data: { isActive: false, requestTime: '0' } },
+  })
+}
+export const deleteWill = async (data: FormTypes[]): Promise<void> => {
+  for (let i = 0; i < data.length; i += 1) {
+    request({
+      url: `/wills/${data[i].id}`,
+      method: 'DELETE',
+    })
+  }
+}
+export const getWills = async (params: { address: string }): Promise<any[]> => {
+  const res = await request({
+    url: `/wills?filters[baseAddress][$eq]=${params.address}&sort=id`,
+    method: 'GET',
+  })
+  return res
+}
+
+export const hasWill = async (baseAddress: string, chainSelector: string): Promise<boolean> => {
+  const req = await request({
+    url: `/wills?filters[baseAddress][$eq]=${baseAddress}&filters[chainSelector][$eq]=${chainSelector}`,
+    method: 'GET',
+  })
+  if (req.data.length === 0) {
+    return false
+  }
+  return true
+}
+
+export const saveWills = async (data: FormTypes[]): Promise<void> => {
+  for (let i = 0; i < data.length; i += 1) {
+    if (data[i].id) {
+      console.log('update', data)
+      await request({
+        url: `/wills/${data[i].id}`,
+        method: 'PUT',
+        data: { data: data[i] },
+      })
+    } else {
+      await request({
+        url: `/wills`,
+        method: 'POST',
+        data: { data: data[i] },
+      })
+    }
+  }
 }
